@@ -27,14 +27,14 @@ app.include_router(analysis.router)
 @app.on_event("startup")
 async def startup_event():
     """Run on application startup"""
-    print("🚀 ForensicStack API starting...")
+    print("ForensicStack API starting...")
     
     from forensicstack.core.database import test_connection
     
     if test_connection():
         print("Database connected")
     else:
-        print("❌ Database connection failed")
+        print("Database connection failed")
 
 
 # Import routes

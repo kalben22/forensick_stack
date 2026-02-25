@@ -167,7 +167,7 @@ POSTGRES_USER=forensicstack
 POSTGRES_PASSWORD=Pass123456
 POSTGRES_DB=forensicstack
 POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
+POSTGRES_PORT=5433
 
 # Redis (SANS mot de passe pour Docker local)
 REDIS_PASSWORD=

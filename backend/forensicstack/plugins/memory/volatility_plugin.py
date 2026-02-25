@@ -103,7 +103,7 @@ class VolatilityPlugin:
         if extra_args:
             cmd.extend(extra_args)
         
-        print(f"🔬 Running: {' '.join(cmd)}")
+        print(f"Running: {' '.join(cmd)}")
         
         try:
             result = subprocess.run(
