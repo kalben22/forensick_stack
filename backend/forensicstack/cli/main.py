@@ -2,6 +2,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 from pathlib import Path
+import sys
 
 app = typer.Typer(name="forensicstack", help="DFIR Investigation Platform CLI")
 console = Console()
@@ -55,7 +56,6 @@ def list_volatility_plugins():
     console.print(f"[bold cyan]Volatility {vol.version}[/bold cyan]")
     console.print(f"[green]{len(plugins)} plugins available[/green]\n")
     
-    # Group by OS
     windows = [p for p in plugins if p.startswith("windows.")]
     linux = [p for p in plugins if p.startswith("linux.")]
     mac = [p for p in plugins if p.startswith("mac.")]
@@ -77,8 +77,9 @@ def list_volatility_plugins():
         for p in mac[:5]:
             console.print(f"  • {p}")
 
-@vol_app.command("run")
+@vol_app.command("run", context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
 def run_volatility(
+    ctx: typer.Context,
     dump: str = typer.Argument(..., help="Path to memory dump"),
     plugin: str = typer.Argument(..., help="Plugin name (e.g., windows.pslist)"),
     output_format: str = typer.Option("text", "--format", "-f", help="Output format: text, json, csv"),
@@ -87,10 +88,12 @@ def run_volatility(
     """
     Run Volatility plugin on a memory dump
     
+    All extra arguments are passed directly to Volatility.
+    
     Examples:
         forensicstack volatility run memory.dmp windows.pslist
-        forensicstack volatility run dump.raw windows.netscan --format json
-        forensicstack volatility run memory.dmp linux.pslist --output results.txt
+        forensicstack volatility run memory.dmp windows.dlllist --pid 1808
+        forensicstack volatility run memory.dmp windows.netscan --format json
     """
     from forensicstack.plugins.memory.volatility import get_volatility_plugin
     
@@ -100,8 +103,11 @@ def run_volatility(
     
     console.print(f"[cyan]Analyzing {dump} with {plugin}...[/cyan]")
     
+    # Récupérer tous les arguments supplémentaires
+    extra_args = ctx.args
+    
     vol = get_volatility_plugin()
-    result = vol.run(dump, plugin, output_format, output_file)
+    result = vol.run(dump, plugin, output_format, output_file, extra_args)
     
     if result["status"] == "success":
         console.print("[green]Analysis completed![/green]\n")
@@ -110,7 +116,9 @@ def run_volatility(
         else:
             console.print(result["output"])
     else:
-        console.print(f"[red]Error:[/red] {result.get('error', 'Unknown error')}")
+        console.print(f"[red] Error:[/red]\n{result.get('error', 'Unknown error')}")
+        if result.get('stderr'):
+            console.print(f"\n[dim]{result['stderr']}[/dim]")
 
 @vol_app.command("pslist")
 def volatility_pslist(
@@ -143,6 +151,49 @@ def volatility_netscan(
         console.print(result["output"])
     else:
         console.print(f"[red]Error:[/red] {result.get('error')}")
+
+@vol_app.command("vol2-help")
+def volatility2_migration_guide():
+    """Show Volatility 2 to 3 migration guide"""
+    
+    console.print("\n[bold cyan]Volatility 2 → 3 Migration Guide[/bold cyan]\n")
+    
+    table = Table(title="Common Command Changes")
+    table.add_column("Volatility 2", style="red")
+    table.add_column("Volatility 3", style="green")
+    table.add_column("Notes")
+    
+    migrations = [
+        ("imageinfo", "windows.info", "Get system info"),
+        ("pslist", "windows.pslist", "List processes"),
+        ("pstree", "windows.pstree", "Process tree"),
+        ("psscan", "windows.psscan", "Scan for processes"),
+        ("dlllist", "windows.dlllist", "List DLLs"),
+        ("netscan", "windows.netscan", "Network connections"),
+        ("netstat", "windows.netstat", "Network stats"),
+        ("malfind", "windows.malfind", "Find malicious code"),
+        ("filescan", "windows.filescan", "Scan for files"),
+        ("hivelist", "windows.registry.hivelist", "Registry hives"),
+        ("printkey", "windows.registry.printkey", "Print registry key"),
+    ]
+    
+    for vol2, vol3, note in migrations:
+        table.add_row(vol2, vol3, note)
+    
+    console.print(table)
+    
+    console.print("\n[bold yellow]Key Differences:[/bold yellow]")
+    console.print("  1. No --profile needed in Vol3 (auto-detected)")
+    console.print("  2. Use --pid instead of -p")
+    console.print("  3. Plugins have OS prefix (windows., linux., mac.)")
+    console.print("  4. Pass extra args directly\n")
+    
+    console.print("[bold cyan]Examples:[/bold cyan]")
+    console.print("  Vol2: vol.py -f mem.dmp --profile=Win7SP1x86 pslist")
+    console.print("  Vol3: forensicstack volatility run mem.dmp windows.pslist\n")
+    
+    console.print("  Vol2: vol.py -f mem.dmp dlllist -p 1808")
+    console.print("  Vol3: forensicstack volatility run mem.dmp windows.dlllist --pid 1808\n")
 
 if __name__ == "__main__":
     app()
