@@ -59,7 +59,7 @@ def analyze_memory_volatility(artifact_id: int, plugin: str, output_format: str 
         # TODO: Download from MinIO
         dump_path = artifact.file_path
         
-        print(f"🔬 Analyzing artifact {artifact_id} with {plugin}")
+        print(f"Analyzing artifact {artifact_id} with {plugin}")
         
         # Run Volatility
         vol = VolatilityPlugin()
