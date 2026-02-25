@@ -110,7 +110,7 @@ def run_volatility(
         else:
             console.print(result["output"])
     else:
-        console.print(f"[red]❌ Error:[/red] {result.get('error', 'Unknown error')}")
+        console.print(f"[red]Error:[/red] {result.get('error', 'Unknown error')}")
 
 @vol_app.command("pslist")
 def volatility_pslist(
