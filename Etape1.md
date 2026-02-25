@@ -3,7 +3,7 @@
 
 > **Date :** 23 février 2026  
 > **Version :** 0.1.0-alpha  
-> **Statut :** ✅ Complété
+> **Statut :** Complété
 
 ---
 
@@ -27,14 +27,14 @@
 
 ### Objectifs atteints
 
-- ✅ **Setup complet du projet** (backend, infrastructure)
-- ✅ **Installation de toutes les dépendances**
-- ✅ **Configuration de l'environnement de développement**
-- ✅ **Déploiement de l'infrastructure Docker** (PostgreSQL, Redis, MinIO, ChromaDB)
-- ✅ **API REST FastAPI fonctionnelle**
-- ✅ **Celery worker opérationnel**
-- ✅ **CLI de base avec Typer**
-- ✅ **Documentation et configuration des secrets**
+- **Setup complet du projet** (backend, infrastructure)
+- **Installation de toutes les dépendances**
+- **Configuration de l'environnement de développement**
+- **Déploiement de l'infrastructure Docker** (PostgreSQL, Redis, MinIO, ChromaDB)
+- **API REST FastAPI fonctionnelle**
+- **Celery worker opérationnel**
+- **CLI de base avec Typer**
+- **Documentation et configuration des secrets**
 
 ### Durée totale
 Environ 4-6 heures (incluant résolution des problèmes)
@@ -209,13 +209,13 @@ Services configurés :
 
 ---
 
-## 🚀 Services déployés
+## Services déployés
 
 ### 1. API FastAPI
 
 **URL :** http://localhost:8001  
 **Documentation :** http://localhost:8001/docs  
-**Status :** ✅ Running
+**Status :** Running
 
 **Commande de lancement :**
 ```powershell
@@ -232,7 +232,7 @@ uvicorn forensicstack.api.main:app --reload --port 8001
 
 ### 2. Celery Worker
 
-**Status :** ✅ Running  
+**Status :** Running  
 **Tasks enregistrées :**
 - `forensicstack.analyze_artifact`
 - `forensicstack.generate_timeline`
@@ -253,7 +253,7 @@ celery -A forensicstack.core.tasks worker --loglevel=info --pool=solo
 
 ### 3. PostgreSQL
 
-**Status :** ✅ Running  
+**Status :** Running  
 **Port :** 5432  
 **Database :** forensicstack  
 **User :** forensicstack
@@ -270,7 +270,7 @@ docker exec -it forensick_stack-postgres-1 psql -U forensicstack -d forensicstac
 
 ### 4. Redis
 
-**Status :** ✅ Running  
+**Status :** Running  
 **Port :** 6379  
 **Auth :** Aucune (développement)
 
@@ -281,7 +281,7 @@ docker exec -it forensick_stack-redis-1 redis-cli
 
 ### 5. MinIO
 
-**Status :** ✅ Running  
+**Status :** Running  
 **API Port :** 9000  
 **Console Port :** 9001  
 **Console URL :** http://localhost:9001
@@ -292,7 +292,7 @@ docker exec -it forensick_stack-redis-1 redis-cli
 
 ### 6. ChromaDB
 
-**Status :** ✅ Running  
+**Status :** Running  
 **Port :** 8000  
 **Usage :** Vector database pour AI/RAG (futur)
 
@@ -420,49 +420,49 @@ python -m forensicstack.cli.main case create --title "Mon cas" --description "De
 
 ---
 
-## ✅ Tests et validation
+## Tests et validation
 
 ### Tests effectués
 
 #### Infrastructure
 ```powershell
-# ✅ Vérifier Docker
+# Vérifier Docker
 docker ps
 # Résultat : 4 containers running (postgres, redis, minio, chromadb)
 
-# ✅ Tester PostgreSQL
+# Tester PostgreSQL
 docker exec -it forensick_stack-postgres-1 psql -U forensicstack -d forensicstack -c "SELECT 1;"
 
-# ✅ Tester Redis
+# Tester Redis
 docker exec -it forensick_stack-redis-1 redis-cli ping
 # Résultat : PONG
 ```
 
 #### API
 ```powershell
-# ✅ Health check
+# Health check
 curl.exe http://localhost:8001/health
 
-# ✅ List cases
+# List cases
 curl.exe http://localhost:8001/api/v1/cases
 
-# ✅ Documentation Swagger
+# Documentation Swagger
 # Ouvrir : http://localhost:8001/docs
 ```
 
 #### Celery
 ```powershell
-# ✅ Worker running
+# Worker running
 celery -A forensicstack.core.tasks worker --loglevel=info --pool=solo
 # Résultat : 3 tasks enregistrées, connecté à Redis
 ```
 
 #### CLI
 ```powershell
-# ✅ Version
+# Version
 python -m forensicstack.cli.main version
 
-# ✅ Status
+# Status
 python -m forensicstack.cli.main status
 ```
 
@@ -538,7 +538,7 @@ psycopg[binary]==3.2.0
 
 ---
 
-## 📊 Métriques du projet
+## Métriques du projet
 
 ### Lignes de code (approximatif)
 
@@ -568,17 +568,17 @@ psycopg[binary]==3.2.0
 
 ### Bonnes pratiques appliquées
 
-- ✅ Fichier `.env` dans `.gitignore`
-- ✅ Template `.env.example` sans secrets
-- ✅ Script de génération de secrets aléatoires
-- ✅ Séparation des secrets par environnement
-- ✅ Documentation des meilleures pratiques
+- Fichier `.env` dans `.gitignore`
+- Template `.env.example` sans secrets
+- Script de génération de secrets aléatoires
+- Séparation des secrets par environnement
+- Documentation des meilleures pratiques
 
 ### Points d'attention
 
-- ⚠️ Redis sans mot de passe (OK pour dev, **À CHANGER en prod**)
-- ⚠️ CORS ouvert à tous (`*`) - **À restreindre en prod**
-- ⚠️ DEBUG=true - **À désactiver en prod**
+- Redis sans mot de passe (OK pour dev, **À CHANGER en prod**)
+- CORS ouvert à tous (`*`) - **À restreindre en prod**
+- DEBUG=true - **À désactiver en prod**
 
 ---
 
@@ -694,14 +694,14 @@ docker compose stop
 
 ### Ce qui a été réalisé
 
-1. ✅ **Infrastructure complète** déployée et opérationnelle
-2. ✅ **API REST moderne** avec documentation auto-générée
-3. ✅ **System de tâches asynchrones** avec Celery
-4. ✅ **CLI professionnel** avec interface Rich
-5. ✅ **Base de données** PostgreSQL configurée
-6. ✅ **Stockage objet** MinIO pour artefacts
-7. ✅ **Documentation exhaustive** du projet
-8. ✅ **Bonnes pratiques** de sécurité et configuration
+1. **Infrastructure complète** déployée et opérationnelle
+2. **API REST moderne** avec documentation auto-générée
+3. **System de tâches asynchrones** avec Celery
+4. **CLI professionnel** avec interface Rich
+5. **Base de données** PostgreSQL configurée
+6. **Stockage objet** MinIO pour artefacts
+7. **Documentation exhaustive** du projet
+8. **Bonnes pratiques** de sécurité et configuration
 
 ### Skills acquis
 
