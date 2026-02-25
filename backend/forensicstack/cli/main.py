@@ -116,7 +116,7 @@ def run_volatility(
         else:
             console.print(result["output"])
     else:
-        console.print(f"[red] Error:[/red]\n{result.get('error', 'Unknown error')}")
+        console.print(f"[red]Error:[/red]\n{result.get('error', 'Unknown error')}")
         if result.get('stderr'):
             console.print(f"\n[dim]{result['stderr']}[/dim]")
 
