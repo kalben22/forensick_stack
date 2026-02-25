@@ -1,11 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
-import sys
-from pathlib import Path
-
-# Ajouter le dossier parent au path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+from forensicstack.api.routes import cases, analysis
 
 app = FastAPI(
     title="ForensicStack API",
@@ -24,12 +20,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Import et inclure les routes
-from forensicstack.api.routes import cases
+#Import volatility routes
+app.include_router(cases.router)
+app.include_router(analysis.router)
 
+@app.on_event("startup")
+async def startup_event():
+    """Run on application startup"""
+    print("🚀 ForensicStack API starting...")
+    
+    from forensicstack.core.database import test_connection
+    
+    if test_connection():
+        print("Database connected")
+    else:
+        print("❌ Database connection failed")
+
+
+# Import routes
+from forensicstack.api.routes import cases
 app.include_router(cases.router)
 
-# Root endpoint
+
 @app.get("/")
 async def root():
     return {
@@ -44,7 +56,7 @@ async def root():
         }
     }
 
-# Health check
+
 @app.get("/health")
 async def health_check():
     return {
@@ -52,15 +64,6 @@ async def health_check():
         "timestamp": datetime.utcnow().isoformat(),
         "services": {
             "api": "running",
-            "database": "configured",
-            "redis": "configured",
-            "celery": "configured"
+            "database": "connected"
         }
     }
-
-if __name__ == "__main__":
-    import uvicorn
-    print("🚀 Starting ForensicStack API...")
-    print("📍 URL: http://localhost:8001")
-    print("📖 Docs: http://localhost:8001/docs")
-    uvicorn.run(app, host="0.0.0.0", port=8001, reload=True)

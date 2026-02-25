@@ -1,0 +1,65 @@
+from celery import Celery
+import os
+from dotenv import load_dotenv
+
+# Charger .env
+load_dotenv()
+
+# Configuration Redis
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "R3D1sP@ss!")  # ← Vide par défaut !
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = os.getenv("REDIS_PORT", "6379")
+REDIS_DB = os.getenv("REDIS_CELERY_DB", "1")
+
+# Construire l'URL SANS mot de passe si vide
+if REDIS_PASSWORD and REDIS_PASSWORD.strip():
+    REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+    print(f" Connecting to Redis with password: redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}")
+else:
+    REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+    print(f" Connecting to Redis WITHOUT password: redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}")
+
+celery_app = Celery(
+    "forensicstack",
+    broker=REDIS_URL,
+    backend=REDIS_URL
+)
+
+celery_app.conf.update(
+    task_serializer="json",
+    accept_content=["json"],
+    result_serializer="json",
+    timezone="UTC",
+    enable_utc=True,
+    broker_connection_retry_on_startup=True,
+)
+
+@celery_app.task(name="forensicstack.analyze_artifact")
+def analyze_artifact(artifact_id: int, module: str):
+    """Analyze an artifact with a specific module"""
+    print(f"Analyzing artifact {artifact_id} with {module}")
+    return {
+        "status": "completed",
+        "artifact_id": artifact_id,
+        "module": module,
+        "results": "Analysis not implemented yet"
+    }
+
+@celery_app.task(name="forensicstack.generate_timeline")
+def generate_timeline(case_id: int):
+    """Generate timeline for a case"""
+    print(f"📅 Generating timeline for case {case_id}")
+    return {
+        "status": "completed",
+        "case_id": case_id,
+        "events": []
+    }
+
+@celery_app.task(name="forensicstack.test_task")
+def test_task():
+    """Simple test task"""
+    print("Celery test task executed successfully!")
+    return {"status": "ok", "message": "Test task completed"}
+
+if __name__ == "__main__":
+    print("Starting Celery worker...")

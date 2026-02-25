@@ -1,59 +1,78 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
-from datetime import datetime
 from typing import List
-from pydantic import BaseModel
+
+from forensicstack.core.database import get_db
+from forensicstack.core import crud
+from forensicstack.api.schemas import (
+    CaseCreate,
+    CaseUpdate,
+    CaseResponse,
+    CaseListResponse
+)
 
 router = APIRouter(prefix="/api/v1/cases", tags=["cases"])
 
-# Pydantic schemas
-class CaseCreate(BaseModel):
-    title: str
-    description: str | None = None
 
-class CaseResponse(BaseModel):
-    id: int
-    case_number: str
-    title: str
-    description: str | None
-    status: str
-    created_at: datetime
+@router.get("/", response_model=CaseListResponse)
+async def list_cases(
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(100, ge=1, le=1000, description="Max records to return"),
+    db: Session = Depends(get_db)
+):
+    """List all investigation cases with pagination"""
+    cases = crud.get_cases(db, skip=skip, limit=limit)
+    total = crud.get_cases_count(db)
     
-    class Config:
-        from_attributes = True
-
-# TODO: Ajouter database dependency
-# @router.get("/", response_model=List[CaseResponse])
-# async def list_cases():
-#     return []
-
-@router.get("/")
-async def list_cases():
-    """List all investigation cases"""
-    # TODO: Query database
     return {
-        "cases": [],
-        "total": 0,
-        "message": "Database integration coming next"
+        "cases": cases,
+        "total": total,
+        "page": skip // limit + 1 if limit > 0 else 1,
+        "page_size": limit
     }
 
-@router.post("/")
-async def create_case(case: CaseCreate):
+
+@router.post("/", response_model=CaseResponse, status_code=201)
+async def create_case(
+    case: CaseCreate,
+    db: Session = Depends(get_db)
+):
     """Create a new investigation case"""
-    # TODO: Save to database
-    return {
-        "message": "Case created (mock)",
-        "case": {
-            "id": 1,
-            "case_number": "CASE-2026-001",
-            "title": case.title,
-            "description": case.description,
-            "status": "open"
-        }
-    }
+    return crud.create_case(db, case)
 
-@router.get("/{case_id}")
-async def get_case(case_id: int):
-    """Get case details"""
-    # TODO: Query database
-    return {"id": case_id, "message": "Case details coming soon"}
+
+@router.get("/{case_id}", response_model=CaseResponse)
+async def get_case(
+    case_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get case details by ID"""
+    db_case = crud.get_case(db, case_id)
+    if not db_case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    return db_case
+
+
+@router.put("/{case_id}", response_model=CaseResponse)
+async def update_case(
+    case_id: int,
+    case_update: CaseUpdate,
+    db: Session = Depends(get_db)
+):
+    """Update a case"""
+    db_case = crud.update_case(db, case_id, case_update)
+    if not db_case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    return db_case
+
+
+@router.delete("/{case_id}", status_code=204)
+async def delete_case(
+    case_id: int,
+    db: Session = Depends(get_db)
+):
+    """Delete a case"""
+    success = crud.delete_case(db, case_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Case not found")
+    return None
