@@ -16,7 +16,7 @@ ForensicStack is a unified digital forensics investigation platform that orchest
 ### Core Capabilities
 - 🤖 **AI Investigation Copilot** - Conversational agents guide you through investigations
 - 🔧 **20+ Integrated Tools** - Volatility, Plaso, RegRipper, Eric Zimmerman Tools, and more
-- 📊 **Automated Timeline Generation** - Super-timeline creation with intelligent correlation
+- **Automated Timeline Generation** - Super-timeline creation with intelligent correlation
 - 📝 **Professional Report Generation** - Executive summaries and technical reports
 - 💻 **Multi-Interface** - CLI, Web UI, and Desktop application
 - 🔌 **Modular Architecture** - Plugin system for easy extensibility
@@ -194,7 +194,7 @@ forensicstack/
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -461,7 +461,7 @@ alembic history
 
 ## 🗺️ Roadmap
 
-### Phase 1: Foundation ✅ (Current)
+### Phase 1: Foundation (Current)
 - [x] Project structure
 - [x] Core engine architecture
 - [x] Database models
@@ -546,14 +546,14 @@ git push origin feature/my-feature
 
 ForensicStack handles sensitive forensic data. Security best practices:
 
-- ✅ Never commit `.env` files
-- ✅ Use strong, randomly generated secrets
-- ✅ Rotate credentials regularly (every 3-6 months)
-- ✅ Enable authentication in production
-- ✅ Use HTTPS for web access
-- ✅ Isolate forensic environments (air-gapped if possible)
-- ✅ Maintain chain of custody logs
-- ✅ Encrypt artifact storage
+- Never commit `.env` files
+- Use strong, randomly generated secrets
+- Rotate credentials regularly (every 3-6 months)
+- Enable authentication in production
+- Use HTTPS for web access
+- Isolate forensic environments (air-gapped if possible)
+- Maintain chain of custody logs
+- Encrypt artifact storage
 
 To report security vulnerabilities, please email: security@forensicstack.io
 
