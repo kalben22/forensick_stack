@@ -11,6 +11,7 @@ __pycache__/
 venv/
 forensic/
 ENV/
+forensicstack/rules/yara/community
 
 # Sensitive data
 *.key
