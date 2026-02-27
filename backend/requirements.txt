@@ -15,5 +15,15 @@ pyyaml
 jinja2
 pytest
 pytest-asyncio
+httpx<0.28         # starlette 0.36 TestClient requires httpx<0.28
 black
 ruff
+# Auth JWT
+python-jose[cryptography]
+bcrypt>=4.0.1      # used directly in auth.py (passlib dropped — incompatible with bcrypt>=4)
+# MinIO
+minio
+# YARA
+yara-python
+# ChromaDB (semantic search)
+chromadb

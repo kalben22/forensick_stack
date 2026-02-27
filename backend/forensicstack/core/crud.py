@@ -1,3 +1,4 @@
+import uuid
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
@@ -5,9 +6,10 @@ from forensicstack.core.models import Case, Artifact, Analysis
 from forensicstack.api.schemas import CaseCreate, CaseUpdate
 
 def generate_case_number() -> str:
-    """Generate unique case number"""
+    """Generate a unique case number (date + 6-char hex suffix)."""
     now = datetime.utcnow()
-    return f"CASE-{now.year}-{now.month:02d}{now.day:02d}-{now.hour:02d}{now.minute:02d}{now.second:02d}"
+    suffix = uuid.uuid4().hex[:6].upper()
+    return f"CASE-{now.year}-{now.month:02d}{now.day:02d}-{suffix}"
 
 # ===== CASES =====cl
 def create_case(db: Session, case: CaseCreate) -> Case:
@@ -90,3 +92,24 @@ def get_artifact(db: Session, artifact_id: int) -> Optional[Artifact]:
 def get_artifacts_by_case(db: Session, case_id: int) -> List[Artifact]:
     """Get all artifacts for a case"""
     return db.query(Artifact).filter(Artifact.case_id == case_id).all()
+
+
+# ===== ANALYSES =====
+
+def create_analysis(db: Session, analysis_data: dict) -> Analysis:
+    """Create a new analysis record"""
+    db_analysis = Analysis(**analysis_data)
+    db.add(db_analysis)
+    db.commit()
+    db.refresh(db_analysis)
+    return db_analysis
+
+
+def get_analysis(db: Session, analysis_id: int) -> Optional[Analysis]:
+    """Get analysis by ID"""
+    return db.query(Analysis).filter(Analysis.id == analysis_id).first()
+
+
+def get_analyses_by_artifact(db: Session, artifact_id: int) -> List[Analysis]:
+    """Get all analyses for an artifact"""
+    return db.query(Analysis).filter(Analysis.artifact_id == artifact_id).all()

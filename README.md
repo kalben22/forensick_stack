@@ -1,608 +1,396 @@
-# ForensicStack 🔬
+# ForensicStack
 
-> **All-in-One DFIR Investigation Platform with AI-Powered Agents**
+> **All-in-One DFIR Investigation Platform**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-green.svg)](https://fastapi.tiangolo.com/)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
-[![Status](https://img.shields.io/badge/status-alpha-orange.svg)]()
+![Status](https://img.shields.io/badge/status-alpha-orange.svg)
 
-ForensicStack is a unified digital forensics investigation platform that orchestrates popular forensic tools (Volatility, Plaso, Eric Zimmerman Tools, RegRipper) under a single, modern interface. With AI-powered investigation agents, automated timeline correlation, and professional report generation.
-
----
-
-## 🌟 Features
-
-### Core Capabilities
-- 🤖 **AI Investigation Copilot** - Conversational agents guide you through investigations
-- 🔧 **20+ Integrated Tools** - Volatility, Plaso, RegRipper, Eric Zimmerman Tools, and more
-- **Automated Timeline Generation** - Super-timeline creation with intelligent correlation
-- 📝 **Professional Report Generation** - Executive summaries and technical reports
-- 💻 **Multi-Interface** - CLI, Web UI, and Desktop application
-- 🔌 **Modular Architecture** - Plugin system for easy extensibility
-- 🔐 **Chain of Custody** - Automated hashing, timestamping, and audit logs
-- 🌐 **Multi-User Collaboration** - Work together on complex investigations
-
-### AI Agents
-- **Investigation Copilot** - Main conversational assistant
-- **Triage Agent** - Prioritization and initial analysis
-- **Malware Analysis Agent** - Specialized in malware detection and analysis
-- **Incident Response Agent** - Guided IR workflows
-- **Timeline Analyst** - Intelligent event correlation
-- **Report Writer** - Automated narrative generation
-- **Threat Intelligence Agent** - IoC enrichment and attribution
+ForensicStack is a unified digital forensics investigation platform that orchestrates popular forensic tools — **iLEAPP**, **ALEAPP**, **ExifTool**, and **Volatility3** — under a single REST API. Each tool runs in an isolated Docker container, results are normalised into a common `Finding` format, stored in MinIO, and indexed in ChromaDB for semantic search.
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
-### System Architecture
+```text
+Investigator
+    │
+    │  HTTP  (JWT Bearer)
+    ▼
+┌─────────────────────────────────┐
+│         FastAPI  (port 8080)     │
+│  /auth  /cases  /artifacts       │
+│  /jobs  /search                  │
+└────────────┬────────────────────┘
+             │  lpush → job_queue
+             ▼
+┌─────────────────────┐       ┌──────────────────────────────┐
+│    Redis  (queue)   │──────▶│        Worker process         │
+└─────────────────────┘       │  DockerExecutor.run_plugin()  │
+                               │  ┌──────────────────────────┐│
+                               │  │  docker run              ││
+                               │  │  forensicstack/exiftool  ││
+                               │  │  forensicstack/ileapp    ││
+                               │  │  forensicstack/aleapp    ││
+                               │  │  forensicstack/volatility││
+                               │  └──────────────────────────┘│
+                               │  normalize() → Finding[]      │
+                               │  upload results → MinIO        │
+                               │  index findings → ChromaDB     │
+                               └──────────────────────────────┘
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                   CLIENT INTERFACES                      │
-├───────────────┬─────────────────┬──────────────────────┤
-│   CLI Tool    │   Web Browser   │   Desktop App        │
-│   (Typer)     │   (React)       │   (Tauri)            │
-└───────┬───────┴────────┬────────┴──────────┬───────────┘
-        │                │                   │
-        └────────────────┼───────────────────┘
-                         │
-            ┌────────────▼──────────────┐
-            │      REST API              │
-            │      (FastAPI)             │
-            └────────────┬──────────────┘
-                         │
-        ┌────────────────┼────────────────┐
-        │                │                │
-   ┌────▼────┐     ┌────▼────┐     ┌────▼────┐
-   │  Core   │     │   AI    │     │  Plugin │
-   │ Engine  │     │ Agents  │     │ System  │
-   └────┬────┘     └────┬────┘     └────┬────┘
-        │               │               │
-        └───────────────┼───────────────┘
-                        │
-        ┌───────────────┼───────────────┐
-        │               │               │
-   ┌────▼────┐    ┌────▼────┐    ┌────▼────┐
-   │Database │    │  Cache  │    │ Storage │
-   │(Postgres)    │ (Redis) │    │ (MinIO) │
-   └─────────┘    └─────────┘    └─────────┘
-                        │
-        ┌───────────────┴───────────────┐
-        │    External Forensic Tools     │
-        │ Volatility│Plaso│RegRipper│... │
-        └────────────────────────────────┘
+Infrastructure (docker-compose):
+  PostgreSQL  — cases / artifacts / analyses metadata
+  Redis       — job queue + job status store
+  MinIO       — raw artifact files + analysis outputs (S3-compatible)
+  ChromaDB    — vector store for semantic search (all-MiniLM-L6-v2)
 ```
 
-### Project Structure
+---
 
-```
-forensicstack/
-├── backend/                      # Python backend
-│   ├── forensicstack/            # Main package
-│   │   ├── __init__.py
-│   │   ├── core/                 # Core engine
-│   │   │   ├── __init__.py
-│   │   │   ├── models.py         # Database models
-│   │   │   ├── orchestrator.py  # Tool orchestration
-│   │   │   ├── timeline.py       # Timeline generation
-│   │   │   ├── reports.py        # Report engine
-│   │   │   └── ioc.py            # IoC extraction
-│   │   ├── api/                  # FastAPI application
-│   │   │   ├── __init__.py
-│   │   │   ├── main.py           # API entry point
-│   │   │   ├── routes/           # API endpoints
-│   │   │   ├── schemas.py        # Pydantic models
-│   │   │   └── dependencies.py   # DI and auth
-│   │   ├── cli/                  # CLI application
-│   │   │   ├── __init__.py
-│   │   │   ├── main.py           # CLI entry point
-│   │   │   └── commands/         # CLI commands
-│   │   ├── agents/               # AI agents
-│   │   │   ├── __init__.py
-│   │   │   ├── core/             # Agent framework
-│   │   │   │   ├── base.py       # Base agent class
-│   │   │   │   ├── orchestrator.py
-│   │   │   │   └── memory.py
-│   │   │   ├── specialized/      # Specialized agents
-│   │   │   │   ├── copilot.py
-│   │   │   │   ├── triage.py
-│   │   │   │   ├── malware.py
-│   │   │   │   ├── ir.py
-│   │   │   │   └── timeline.py
-│   │   │   ├── prompts/          # Agent prompts
-│   │   │   └── tools/            # Function calling
-│   │   ├── plugins/              # Plugin system
-│   │   │   ├── __init__.py
-│   │   │   ├── base.py           # Plugin interface
-│   │   │   ├── windows/          # Windows forensics
-│   │   │   │   ├── registry.py
-│   │   │   │   ├── eventlogs.py
-│   │   │   │   └── prefetch.py
-│   │   │   ├── memory/           # Memory analysis
-│   │   │   │   └── volatility.py
-│   │   │   ├── timeline/         # Timeline tools
-│   │   │   │   └── plaso.py
-│   │   │   ├── network/          # Network analysis
-│   │   │   └── malware/          # Malware analysis
-│   │   └── utils/                # Utilities
-│   │       ├── __init__.py
-│   │       ├── hashing.py
-│   │       ├── logging.py
-│   │       └── config.py
-│   ├── alembic/                  # Database migrations
-│   │   ├── versions/
-│   │   └── env.py
-│   ├── tests/                    # Tests
-│   │   ├── unit/
-│   │   ├── integration/
-│   │   └── e2e/
-│   ├── requirements.txt          # Python dependencies
-│   ├── requirements-dev.txt      # Dev dependencies
-│   ├── alembic.ini               # Alembic config
-│   ├── .env.example              # Environment template
-│   └── README.md                 # Backend documentation
-├── web/                          # React frontend
-│   ├── src/
-│   │   ├── components/           # Reusable components
-│   │   ├── features/             # Feature modules
-│   │   │   ├── investigation/
-│   │   │   ├── timeline/
-│   │   │   ├── reports/
-│   │   │   └── chat/             # AI chat interface
-│   │   ├── pages/                # Page components
-│   │   ├── hooks/                # Custom hooks
-│   │   ├── services/             # API clients
-│   │   ├── stores/               # State management
-│   │   ├── types/                # TypeScript types
-│   │   └── utils/                # Utilities
-│   ├── public/
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── vite.config.ts
-├── desktop/                      # Tauri desktop app
-│   ├── src/                      # Same as web
-│   ├── src-tauri/                # Rust backend
-│   │   ├── src/
-│   │   └── Cargo.toml
-│   └── package.json
-├── docs/                         # Documentation
-│   ├── getting-started.md
-│   ├── architecture.md
-│   ├── plugins.md
-│   ├── api-reference.md
-│   └── contributing.md
-├── docker/                       # Docker configs
-│   ├── Dockerfile.backend
-│   ├── Dockerfile.web
-│   └── docker-compose.prod.yml
-├── scripts/                      # Utility scripts
-│   ├── generate_secrets.py
-│   ├── setup.sh
-│   └── setup.ps1
-├── .github/                      # GitHub configs
-│   ├── workflows/                # CI/CD
-│   │   ├── tests.yml
-│   │   └── deploy.yml
-│   └── ISSUE_TEMPLATE/
-├── docker-compose.yml            # Development infrastructure
-├── .gitignore
-├── LICENSE                       # GPL-3.0
-└── README.md                     # This file
-```
+## Prerequisites
+
+| Requirement    | Version |
+|----------------|---------|
+| Python         | 3.11+   |
+| Docker         | 24+     |
+| Docker Compose | v2+     |
+| Git            | any     |
 
 ---
 
 ## Quick Start
 
-### Prerequisites
-
-- **Python 3.11+**
-- **Node.js 18+** (for web/desktop)
-- **Docker & Docker Compose** (recommended)
-- **Git**
-
-**Operating Systems:**
-- Windows 10/11 (with WSL2 for Docker)
-- Linux (Ubuntu 22.04+, Debian, etc.)
-- macOS (Intel or Apple Silicon)
-
-### Installation
-
-#### 1. Clone the Repository
+### 1. Clone
 
 ```bash
-git clone https://github.com/yourusername/forensicstack.git
-cd forensicstack
+git clone https://github.com/kalben22/forensick_stack.git
+cd forensick_stack
 ```
 
-#### 2. Setup Backend
+### 2. Configure environment
 
 ```bash
 cd backend
+cp .env.example .env
+# Edit .env — change all passwords and generate a SECRET_KEY:
+python -c "import secrets; print(secrets.token_hex(32))"
+```
 
-# Create virtual environment
+### 3. Start infrastructure
+
+```bash
+cd backend
+docker compose up -d postgres redis minio chromadb
+docker compose ps   # all should be "healthy"
+```
+
+### 4. Build forensic tool images
+
+This is required **once** so the worker can run tools in containers:
+
+```bash
+# Linux / macOS
+chmod +x scripts/build-tools.sh
+./scripts/build-tools.sh
+
+# Windows (PowerShell)
+.\scripts\build-tools.ps1
+```
+
+Expected output:
+
+```text
+[build-tools] Building forensicstack/ileapp:0.1 ...      OK
+[build-tools] Building forensicstack/aleapp:0.1 ...      OK
+[build-tools] Building forensicstack/exiftool:0.1 ...    OK
+[build-tools] Building forensicstack/volatility:0.1 ...  OK
+```
+
+> Note: iLEAPP and ALEAPP clone their repos from GitHub — first build takes a few minutes.
+
+### 5. Install Python dependencies
+
+```bash
+cd backend
 python -m venv venv
 
-# Activate (Windows)
-.\venv\Scripts\Activate.ps1
-# Activate (Linux/Mac)
+# Linux/macOS
 source venv/bin/activate
 
-# Upgrade pip
-python -m pip install --upgrade pip setuptools wheel
+# Windows
+.\venv\Scripts\Activate.ps1
 
-# Install dependencies
 pip install -r requirements.txt
-
-# Copy environment template
-cp .env.example .env
-
-# Edit .env with your configuration
-# nano .env  # or use your favorite editor
 ```
 
-#### 3. Setup Infrastructure (Docker)
-
-```bash
-# From project root
-docker compose up -d
-
-# Verify services are running
-docker compose ps
-```
-
-**Services started:**
-- PostgreSQL (port 5433)
-- Redis (port 6379)
-- MinIO (ports 9000, 9001)
-- ChromaDB (port 8000)
-
-#### 4. Initialize Database
+### 6. Run the API
 
 ```bash
 cd backend
-
-# Initialize Alembic (if not done)
-alembic init alembic
-
-# Run migrations
-alembic upgrade head
+uvicorn forensicstack.api.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
-#### 5. Setup Frontend (Optional)
+Interactive docs: [http://localhost:8080/docs](http://localhost:8080/docs)
 
-```bash
-cd web
+### 7. Run the worker (separate terminal)
 
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-```
-
-#### 6. Run the Application
-
-**CLI:**
 ```bash
 cd backend
-python -m forensicstack.cli.main --help
-```
-
-**API:**
-```bash
-cd backend
-uvicorn forensicstack.api.main:app --reload
-# API docs: http://localhost:8000/docs
-```
-
-**Web UI:**
-```bash
-cd web
-npm run dev
-# Open: http://localhost:5173
+source venv/bin/activate   # or .\venv\Scripts\Activate.ps1
+python -m forensicstack.worker
 ```
 
 ---
 
-## ⚙️ Configuration
+## API Overview
 
-### Environment Variables
+All protected endpoints require `Authorization: Bearer <token>`.
 
-Create a `.env` file in the `backend/` directory:
+### Auth
 
-```bash
-# Database
-POSTGRES_USER=forensicstack
-POSTGRES_PASSWORD=your-secure-password
-POSTGRES_DB=forensicstack
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5433
-
-# Redis
-REDIS_PASSWORD=your-redis-password
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-# MinIO (Object Storage)
-MINIO_ROOT_USER=forensicadmin
-MINIO_ROOT_PASSWORD=your-minio-password
-MINIO_ENDPOINT=localhost:9000
-
-# API Security
-SECRET_KEY=generate-a-random-secret-key-min-32-chars
-JWT_SECRET=generate-a-random-jwt-secret-min-32-chars
-API_KEY=your-api-key
-
-# AI APIs (Optional but recommended)
-ANTHROPIC_API_KEY=sk-ant-your-key-here
-OPENAI_API_KEY=sk-your-openai-key-here
-
-# Application
-DEBUG=true
-LOG_LEVEL=INFO
-```
-
-### Generate Secure Secrets
+| Method | Endpoint        | Description                   |
+|--------|-----------------|-------------------------------|
+| POST   | `/auth/register` | Create an investigator account |
+| POST   | `/auth/login`    | Get a JWT access token        |
+| GET    | `/auth/me`       | Current user profile          |
 
 ```bash
-cd backend
-python scripts/generate_secrets.py
-```
-
-Copy the output into your `.env` file.
-
----
-
-## 📖 Usage
-
-### CLI Examples
-
-```bash
-# Create a new investigation case
-forensicstack case create --title "Malware Investigation" --description "Suspected ransomware infection"
-
-# Upload an artifact
-forensicstack artifact upload --case-id 1 --file /path/to/memory.dump --type memory_dump
-
-# Run analysis
-forensicstack analyze --artifact-id 1 --module volatility --plugin pslist
-
-# Generate timeline
-forensicstack timeline generate --case-id 1
-
-# Export report
-forensicstack report generate --case-id 1 --format pdf --output report.pdf
-
-# Chat with AI Copilot
-forensicstack chat --case-id 1
-```
-
-### API Examples
-
-```bash
-# Create a case
-curl -X POST "http://localhost:8000/api/v1/cases" \
+# Register
+curl -X POST http://localhost:8080/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"title": "Investigation #001", "description": "Malware analysis"}'
+  -d '{"username":"analyst1","password":"S3cur3Pass!"}'
 
-# Upload artifact
-curl -X POST "http://localhost:8000/api/v1/artifacts" \
-  -F "file=@memory.dump" \
-  -F "case_id=1" \
+# Login and capture token
+TOKEN=$(curl -s -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"analyst1","password":"S3cur3Pass!"}' \
+  | python -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+```
+
+### Cases
+
+| Method | Endpoint              | Description      |
+|--------|-----------------------|------------------|
+| POST   | `/api/v1/cases/`      | Create a case    |
+| GET    | `/api/v1/cases/`      | List all cases   |
+| GET    | `/api/v1/cases/{id}`  | Get case detail  |
+| PATCH  | `/api/v1/cases/{id}`  | Update case      |
+| DELETE | `/api/v1/cases/{id}`  | Delete case      |
+
+```bash
+CASE=$(curl -s -X POST http://localhost:8080/api/v1/cases/ \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Malware Investigation #001","description":"Suspected ransomware"}')
+CASE_ID=$(echo $CASE | python -c "import sys,json; print(json.load(sys.stdin)['id'])")
+```
+
+### Artifacts
+
+| Method | Endpoint                              | Description                     |
+|--------|---------------------------------------|---------------------------------|
+| POST   | `/api/v1/cases/{id}/artifacts/`       | Upload a file to MinIO          |
+| GET    | `/api/v1/cases/{id}/artifacts/`       | List artifacts                  |
+| GET    | `/api/v1/cases/{id}/artifacts/{aid}`  | Detail + presigned download URL |
+| DELETE | `/api/v1/cases/{id}/artifacts/{aid}`  | Delete artifact                 |
+
+```bash
+# Upload a memory dump
+curl -X POST http://localhost:8080/api/v1/cases/$CASE_ID/artifacts/ \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@/path/to/memory.dmp" \
   -F "artifact_type=memory_dump"
-
-# Run analysis
-curl -X POST "http://localhost:8000/api/v1/analyses" \
-  -H "Content-Type: application/json" \
-  -d '{"artifact_id": 1, "module": "volatility", "plugin": "pslist"}'
 ```
 
-### Web UI
+Supported `artifact_type` values: `memory_dump`, `disk_image`, `mobile_backup`, `pcap`, `logs`, `malware_sample`, `document`, `other`.
 
-1. Open http://localhost:5173
-2. Create a new investigation case
-3. Upload artifacts (disk images, memory dumps, PCAPs, logs)
-4. Chat with AI Copilot: "Analyze this memory dump for suspicious processes"
-5. View results in the timeline
-6. Generate and download reports
+### Jobs (analysis)
+
+| Method | Endpoint                   | Description              |
+|--------|----------------------------|--------------------------|
+| GET    | `/api/v1/jobs/tools`       | List available tools     |
+| POST   | `/api/v1/jobs/submit`      | Submit an analysis job   |
+| GET    | `/api/v1/jobs/{job_id}`    | Poll job status          |
+
+```bash
+# Submit a job
+JOB=$(curl -s -X POST http://localhost:8080/api/v1/jobs/submit \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"tool":"exiftool","artifact_id":1}')
+JOB_ID=$(echo $JOB | python -c "import sys,json; print(json.load(sys.stdin)['job_id'])")
+
+# Poll until completed
+curl http://localhost:8080/api/v1/jobs/$JOB_ID -H "Authorization: Bearer $TOKEN"
+```
+
+Available tools: `exiftool`, `ileapp`, `aleapp`, `volatility`.
+
+### Semantic Search
+
+| Method | Endpoint                     | Description               |
+|--------|------------------------------|---------------------------|
+| POST   | `/api/v1/search/semantic`    | Natural language search   |
+| GET    | `/api/v1/search/stats`       | ChromaDB collection stats |
+
+```bash
+curl -X POST http://localhost:8080/api/v1/search/semantic \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"suspicious process injection into lsass","top_k":10}'
+```
 
 ---
 
-## 🧪 Development
-
-### Running Tests
+## Running Tests
 
 ```bash
 cd backend
+pip install pytest httpx
 
-# Run all tests
-pytest
+# All tests
+pytest tests/ -v
 
-# Run with coverage
-pytest --cov=forensicstack --cov-report=html
+# API tests only (mocked services — no Docker needed)
+pytest tests/test_api.py -v
 
-# Run specific test
-pytest tests/unit/test_models.py
-```
+# Tool-level tests (checks local binaries + YARA)
+pytest tests/test_tools.py -v
 
-### Code Quality
-
-```bash
-# Format code
-black forensicstack/
-
-# Lint
-ruff check forensicstack/
-
-# Type checking
-mypy forensicstack/
-```
-
-### Database Migrations
-
-```bash
-# Create a new migration (auto-detect changes)
-alembic revision --autogenerate -m "Add new table"
-
-# Apply migrations
-alembic upgrade head
-
-# Rollback one migration
-alembic downgrade -1
-
-# View migration history
-alembic history
+# With coverage
+pytest tests/ --cov=forensicstack --cov-report=html
 ```
 
 ---
 
-## 🗺️ Roadmap
+## Project Structure
 
-### Phase 1: Foundation (Current)
-- [x] Project structure
-- [x] Core engine architecture
-- [x] Database models
-- [x] CLI interface (basic)
-- [x] Docker infrastructure
-
-### Phase 2: Core Modules (Q2 2026)
-- [ ] Windows forensics modules (Registry, Event Logs, Prefetch)
-- [ ] Memory analysis (Volatility integration)
-- [ ] Timeline generation (Plaso integration)
-- [ ] Basic report generation
-- [ ] Web API (FastAPI)
-
-### Phase 3: AI Agents (Q3 2026)
-- [ ] Investigation Copilot
-- [ ] Triage Agent
-- [ ] Malware Analysis Agent
-- [ ] IoC Intelligence Hub
-- [ ] Conversational interface
-
-### Phase 4: UI & Collaboration (Q4 2026)
-- [ ] Web UI (React)
-- [ ] Desktop app (Tauri)
-- [ ] Multi-user support
-- [ ] Real-time collaboration
-- [ ] Advanced visualizations
-
-### Phase 5: Advanced Features (2027)
-- [ ] Mobile forensics (iOS, Android)
-- [ ] Network forensics (Zeek, Wireshark)
-- [ ] Cloud forensics (AWS, Azure, GCP)
-- [ ] Automated playbooks
-- [ ] Machine learning triage
-- [ ] Enterprise features (SSO, RBAC, audit)
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](docs/contributing.md) for guidelines.
-
-### How to Contribute
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Development Setup
-
-```bash
-# Clone your fork
-git clone https://github.com/yourusername/forensicstack.git
-cd forensicstack
-
-# Add upstream remote
-git remote add upstream https://github.com/originalauthor/forensicstack.git
-
-# Create branch
-git checkout -b feature/my-feature
-
-# Make changes, commit, push
-git add .
-git commit -m "feat: add new feature"
-git push origin feature/my-feature
+```text
+forensick_stack/
+├── backend/
+│   ├── Dockerfile                         # Backend + worker image
+│   ├── docker-compose.yml                 # Full infrastructure stack
+│   ├── .env.example                       # Environment template
+│   ├── requirements.txt
+│   └── forensicstack/
+│       ├── api/
+│       │   ├── main.py                    # FastAPI app (29 routes)
+│       │   ├── schemas.py                 # Pydantic request/response models
+│       │   ├── jobs.py                    # Redis queue helpers
+│       │   └── routes/
+│       │       ├── auth.py                # /auth/*
+│       │       ├── cases.py               # /api/v1/cases/*
+│       │       ├── artifacts.py           # /api/v1/cases/{id}/artifacts/*
+│       │       ├── analysis.py            # /api/v1/analysis/*
+│       │       ├── jobs.py                # /api/v1/jobs/*
+│       │       └── search.py              # /api/v1/search/*
+│       ├── core/
+│       │   ├── auth.py                    # JWT helpers + FastAPI dependency
+│       │   ├── database.py                # SQLAlchemy engine + session
+│       │   ├── crud.py                    # DB operations
+│       │   ├── minio_service.py           # MinIO client (singleton)
+│       │   ├── chroma_service.py          # ChromaDB client (singleton)
+│       │   ├── plugin_registry.py         # Tool → Docker image mapping
+│       │   ├── normalization_engine.py    # Routes output_dir → normalizer
+│       │   ├── models/
+│       │   │   ├── orm_models.py          # Case, Artifact, Analysis
+│       │   │   ├── user_model.py          # User (auth)
+│       │   │   └── finding_models.py      # Finding dataclass
+│       │   ├── normalizers/               # Per-tool output parsers
+│       │   └── executor/
+│       │       └── docker_executor.py     # docker run wrapper
+│       ├── plugins/
+│       │   └── external/                  # Dockerised forensic tools
+│       │       ├── ileapp/                # Dockerfile + entrypoint.sh
+│       │       ├── aleapp/                # Dockerfile + entrypoint.sh
+│       │       ├── exiftool/              # Dockerfile + entrypoint.sh
+│       │       └── volatility/            # Dockerfile + entrypoint.sh
+│       └── worker.py                      # Redis queue consumer
+├── scripts/
+│   ├── build-tools.sh                     # Build tool images (Linux/macOS)
+│   └── build-tools.ps1                    # Build tool images (Windows)
+└── README.md
 ```
 
 ---
 
-## 📚 Documentation
+## Tools
 
-- [Getting Started Guide](docs/getting-started.md)
-- [Architecture Overview](docs/architecture.md)
-- [Plugin Development](docs/plugins.md)
-- [API Reference](docs/api-reference.md)
-- [Contributing Guide](docs/contributing.md)
+| Tool         | Category         | Mechanism        | Docker Image                   |
+|--------------|------------------|------------------|--------------------------------|
+| ExifTool     | Metadata         | Docker container | `forensicstack/exiftool:0.1`   |
+| iLEAPP       | iOS forensics    | Docker container | `forensicstack/ileapp:0.1`     |
+| ALEAPP       | Android forensics | Docker container | `forensicstack/aleapp:0.1`    |
+| Volatility3  | Memory forensics | Docker container | `forensicstack/volatility:0.1` |
 
----
+All containers run with:
 
-## 🔐 Security
-
-ForensicStack handles sensitive forensic data. Security best practices:
-
-- Never commit `.env` files
-- Use strong, randomly generated secrets
-- Rotate credentials regularly (every 3-6 months)
-- Enable authentication in production
-- Use HTTPS for web access
-- Isolate forensic environments (air-gapped if possible)
-- Maintain chain of custody logs
-- Encrypt artifact storage
-
-To report security vulnerabilities, please email: security@forensicstack.io
+- `--network none` (no internet access during analysis)
+- `--cap-drop=ALL` (minimum privileges)
+- `--read-only` filesystem + tmpfs for /tmp
+- Resource limits (`--memory`, `--cpus`, `--pids-limit`)
 
 ---
 
-## 📄 License
+## Roadmap
 
-This project is licensed under the **GNU General Public License v3.0** - see the [LICENSE](LICENSE) file for details.
+### Phase 1 — Backend Foundation (current)
+
+- [x] FastAPI with JWT authentication
+- [x] Case and artifact management
+- [x] MinIO artifact storage with MD5/SHA256 hashing
+- [x] Redis job queue + worker
+- [x] Docker-isolated forensic tool execution (ExifTool, iLEAPP, ALEAPP, Volatility3)
+- [x] Normalised `Finding` output format
+- [x] ChromaDB semantic search over findings
+- [x] REST API (29 endpoints, Swagger docs)
+
+### Phase 2 — Additional Tools (Q3 2026)
+
+- [ ] Plaso / log2timeline integration via Docker
+- [ ] YARA scanning pipeline
+- [ ] Network forensics (Zeek, Wireshark via Docker)
+- [ ] Windows artefact plugins (Registry, Event Logs, Prefetch)
+
+### Phase 3 — Frontend (Q4 2026)
+
+- [ ] React web interface
+- [ ] Case timeline visualisation
+- [ ] Investigation dashboard
+
+### Phase 4 — AI Agents (2027)
+
+- [ ] Investigation Copilot (Claude API)
+- [ ] Automated triage and classification
+- [ ] Report generation
+
+---
+
+## Security
+
+ForensicStack handles sensitive forensic data. Follow these practices:
+
+- Never commit `.env` to version control — it contains secrets
+- Use strong randomly generated passwords for all services
+- Each forensic tool runs in an isolated container with no network access
+- All artifacts are hashed (MD5 + SHA256) on upload
+- JWT tokens expire after 24 hours by default
+
+---
+
+## License
+
+GNU General Public License v3.0 — see [LICENSE](LICENSE).
 
 ### Third-Party Tools
 
-ForensicStack integrates with external forensic tools, each with their own licenses:
-- Volatility 3 (Volatility Software License)
-- Plaso (Apache 2.0)
-- Eric Zimmerman Tools (various)
-- RegRipper (GPL)
+- [iLEAPP](https://github.com/abrignoni/iLEAPP) — iOS Logs, Events, And Plists Parser (MIT)
+- [ALEAPP](https://github.com/abrignoni/ALEAPP) — Android Logs, Events, And Plists Parser (MIT)
+- [ExifTool](https://exiftool.org/) — libimage-exiftool-perl (Artistic / GPL)
+- [Volatility3](https://github.com/volatilityfoundation/volatility3) — Volatility Software License
 
 ---
 
-## 🙏 Acknowledgments
-
-- **Volatility Foundation** - Memory forensics framework
-- **Log2Timeline/Plaso** - Timeline generation
-- **Eric Zimmerman** - Windows forensics tools
-- **The DFIR Community** - Continuous inspiration and knowledge sharing
-
----
-
-## 📧 Contact
-
-- **Project Lead:** Your Name
-- **Email:** contact@forensicstack.io
-- **Discord:** [Join our community](https://discord.gg/forensicstack)
-- **Twitter:** [@ForensicStack](https://twitter.com/forensicstack)
-
----
-
-## ⭐ Star History
-
-If you find ForensicStack useful, please consider giving it a star! ⭐
-
-[![Star History Chart](https://api.star-history.com/svg?repos=yourusername/forensicstack&type=Date)](https://star-history.com/#yourusername/forensicstack&Date)
-
----
-
-<div align="center">
-
-**Built with ❤️ by the DFIR community, for the DFIR community**
-
-[Documentation](https://docs.forensicstack.io) • [Report Bug](https://github.com/yourusername/forensicstack/issues) • [Request Feature](https://github.com/yourusername/forensicstack/issues)
-
-</div>
+**Built for the DFIR community.**
