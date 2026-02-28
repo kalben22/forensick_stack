@@ -1,0 +1,17 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/(dashboard)/admin/page": "app/(dashboard)/admin/page.js",
+  "/(dashboard)/cases/page": "app/(dashboard)/cases/page.js",
+  "/(dashboard)/cases/[id]/page": "app/(dashboard)/cases/[id]/page.js",
+  "/(dashboard)/ctf/page": "app/(dashboard)/ctf/page.js",
+  "/(dashboard)/findings/page": "app/(dashboard)/findings/page.js",
+  "/(dashboard)/jobs/page": "app/(dashboard)/jobs/page.js",
+  "/(dashboard)/page": "app/(dashboard)/page.js",
+  "/(dashboard)/plugins/page": "app/(dashboard)/plugins/page.js",
+  "/(dashboard)/reports/page": "app/(dashboard)/reports/page.js",
+  "/(dashboard)/storage/page": "app/(dashboard)/storage/page.js",
+  "/(dashboard)/timeline/page": "app/(dashboard)/timeline/page.js",
+  "/(dashboard)/tools/page": "app/(dashboard)/tools/page.js",
+  "/(dashboard)/upload/page": "app/(dashboard)/upload/page.js",
+  "/(auth)/login/page": "app/(auth)/login/page.js"
+}
