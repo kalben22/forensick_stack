@@ -1,29 +1,30 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import * as React from 'react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import {
   Shield,
   LayoutDashboard,
-  Upload,
-  FolderOpen,
-  Flag,
   Activity,
   Search,
   Clock,
-  Puzzle,
   HardDrive,
   FileText,
   Settings,
   ChevronDown,
   Wifi,
-  BookOpen,
   LogOut,
   User,
-} from "lucide-react"
-import { useLogout } from "@/lib/hooks/use-auth"
-import { useAuthStore } from "@/lib/stores/auth-store"
+  Brain,
+  FileSearch,
+  Smartphone,
+  Cpu,
+} from 'lucide-react'
+import { useLogout } from '@/lib/hooks/use-auth'
+import { useAuthStore } from '@/lib/stores/auth-store'
+import { useListTools } from '@/lib/hooks/use-jobs'
+import { Skeleton } from '@/components/ui/skeleton'
 
 import {
   Sidebar,
@@ -34,57 +35,74 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-} from "@/components/ui/sidebar"
+} from '@/components/ui/sidebar'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import type { AppMode } from "@/lib/mock-data"
+} from '@/components/ui/dropdown-menu'
+import type { AppMode } from '@/lib/mock-data'
 
-const NAV_ITEMS_COMMON = [
-  { title: "Dashboard", href: "/", icon: LayoutDashboard },
-  { title: "Upload & Analyze", href: "/upload", icon: Upload },
-  { title: "Tools Catalog", href: "/tools", icon: BookOpen },
+// ── Icon per category ─────────────────────────────────────────────────────────
+
+const CATEGORY_ICON: Record<string, React.ElementType> = {
+  memory:         Brain,
+  metadata:       FileSearch,
+  mobile_ios:     Smartphone,
+  mobile_android: Smartphone,
+  disk:           HardDrive,
+}
+
+const CATEGORY_COLOR: Record<string, string> = {
+  memory:         'text-forensic-cyan',
+  metadata:       'text-forensic-amber',
+  mobile_ios:     'text-forensic-green',
+  mobile_android: 'text-emerald-400',
+}
+
+const TOOL_LABEL: Record<string, string> = {
+  volatility: 'Volatility 3',
+  exiftool:   'ExifTool',
+  ileapp:     'iLEAPP',
+  aleapp:     'aLEAPP',
+}
+
+// ── Secondary nav ─────────────────────────────────────────────────────────────
+
+const NAV_ANALYSIS = [
+  { title: 'Jobs',     href: '/jobs',     icon: Activity },
+  { title: 'Findings', href: '/findings', icon: Search },
+  { title: 'Timeline', href: '/timeline', icon: Clock },
 ]
 
-const NAV_ITEMS_PRO = [
-  { title: "Cases", href: "/cases", icon: FolderOpen },
+const NAV_SYSTEM = [
+  { title: 'Storage', href: '/storage', icon: HardDrive },
+  { title: 'Reports', href: '/reports', icon: FileText },
 ]
 
-const NAV_ITEMS_CTF = [
-  { title: "CTF Workspace", href: "/ctf", icon: Flag },
+const NAV_ADMIN = [
+  { title: 'Admin', href: '/admin', icon: Settings },
 ]
 
-const NAV_ITEMS_ANALYSIS = [
-  { title: "Jobs", href: "/jobs", icon: Activity, badge: 4 },
-  { title: "Findings", href: "/findings", icon: Search },
-  { title: "Timeline", href: "/timeline", icon: Clock },
-]
-
-const NAV_ITEMS_INFRA = [
-  { title: "Plugins", href: "/plugins", icon: Puzzle },
-  { title: "Storage", href: "/storage", icon: HardDrive },
-  { title: "Reports", href: "/reports", icon: FileText },
-]
-
-const NAV_ITEMS_ADMIN = [
-  { title: "Admin", href: "/admin", icon: Settings },
-]
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export function AppSidebar() {
   const pathname = usePathname()
-  const [mode, setMode] = React.useState<AppMode>("pro")
+  const [mode, setMode] = React.useState<AppMode>('pro')
   const logout = useLogout()
   const user = useAuthStore((s) => s.user)
 
+  const { data: toolsData, isLoading: toolsLoading } = useListTools()
+  const tools = toolsData?.tools ?? []
+
   return (
     <Sidebar collapsible="icon">
+
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -94,7 +112,7 @@ export function AppSidebar() {
                   <Shield className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold font-mono tracking-tight">ForensicFlow</span>
+                  <span className="truncate font-semibold font-mono tracking-tight">ForensicStack</span>
                   <span className="truncate text-xs text-muted-foreground">DFIR Platform</span>
                 </div>
               </Link>
@@ -104,19 +122,19 @@ export function AppSidebar() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton className="font-mono text-xs">
-                  <div className={`size-2 rounded-full ${mode === "pro" ? "bg-forensic-cyan" : "bg-forensic-amber"}`} />
-                  <span>{mode === "pro" ? "PRO Mode" : "CTF Mode"}</span>
+                  <div className={`size-2 rounded-full ${mode === 'pro' ? 'bg-forensic-cyan' : 'bg-forensic-amber'}`} />
+                  <span>{mode === 'pro' ? 'PRO Mode' : 'CTF Mode'}</span>
                   <ChevronDown className="ml-auto size-3" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-48">
-                <DropdownMenuItem onClick={() => setMode("pro")} className="font-mono text-xs">
+                <DropdownMenuItem onClick={() => setMode('pro')} className="font-mono text-xs">
                   <div className="size-2 rounded-full bg-forensic-cyan" />
-                  PRO Mode - Full DFIR
+                  PRO Mode — Full DFIR
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setMode("ctf")} className="font-mono text-xs">
+                <DropdownMenuItem onClick={() => setMode('ctf')} className="font-mono text-xs">
                   <div className="size-2 rounded-full bg-forensic-amber" />
-                  CTF Mode - Quick Analysis
+                  CTF Mode — Quick Analysis
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -125,32 +143,72 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {/* Main Navigation */}
+
+        {/* ── Dashboard link ──────────────────────────────────────────────── */}
         <SidebarGroup>
-          <SidebarGroupLabel className="font-mono text-[10px] uppercase tracking-widest">Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {NAV_ITEMS_COMMON.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.title}>
-                    <Link href={item.href}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-              {mode === "pro" && NAV_ITEMS_PRO.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)} tooltip={item.title}>
-                    <Link href={item.href}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-              {NAV_ITEMS_CTF.map((item) => (
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === '/'} tooltip="Dashboard">
+                  <Link href="/">
+                    <LayoutDashboard />
+                    <span>Dashboard</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* ── Tools ──────────────────────────────────────────────────────── */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="font-mono text-[10px] uppercase tracking-widest">
+            Tools
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {toolsLoading && (
+                <>
+                  {[1, 2, 3, 4].map((i) => (
+                    <SidebarMenuItem key={i}>
+                      <SidebarMenuButton disabled>
+                        <Skeleton className="size-4 rounded" />
+                        <Skeleton className="h-3 w-20 rounded" />
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </>
+              )}
+              {tools.map((tool) => {
+                const Icon = CATEGORY_ICON[tool.category] ?? Cpu
+                const color = CATEGORY_COLOR[tool.category] ?? 'text-muted-foreground'
+                const label = TOOL_LABEL[tool.name] ?? tool.name
+                const href = `/tools/${tool.name}`
+                const isActive = pathname.startsWith(href)
+
+                return (
+                  <SidebarMenuItem key={tool.name}>
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={label}>
+                      <Link href={href}>
+                        <Icon className={isActive ? '' : color} />
+                        <span>{label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* ── Analysis ───────────────────────────────────────────────────── */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="font-mono text-[10px] uppercase tracking-widest">
+            Analysis
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {NAV_ANALYSIS.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.title}>
                     <Link href={item.href}>
@@ -164,36 +222,14 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Analysis */}
+        {/* ── System ─────────────────────────────────────────────────────── */}
         <SidebarGroup>
-          <SidebarGroupLabel className="font-mono text-[10px] uppercase tracking-widest">Analysis</SidebarGroupLabel>
+          <SidebarGroupLabel className="font-mono text-[10px] uppercase tracking-widest">
+            System
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {NAV_ITEMS_ANALYSIS.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.title}>
-                    <Link href={item.href}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                  {item.badge && (
-                    <SidebarMenuBadge className="bg-forensic-cyan/20 text-forensic-cyan text-[10px] font-mono">
-                      {item.badge}
-                    </SidebarMenuBadge>
-                  )}
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Infrastructure */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="font-mono text-[10px] uppercase tracking-widest">Infrastructure</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {NAV_ITEMS_INFRA.map((item) => (
+              {NAV_SYSTEM.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.title}>
                     <Link href={item.href}>
@@ -207,11 +243,11 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Admin */}
+        {/* ── Admin ──────────────────────────────────────────────────────── */}
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {NAV_ITEMS_ADMIN.map((item) => (
+              {NAV_ADMIN.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.title}>
                     <Link href={item.href}>
@@ -224,8 +260,10 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
       </SidebarContent>
 
+      {/* ── Footer ─────────────────────────────────────────────────────────── */}
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -247,6 +285,7 @@ export function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
+
       <SidebarRail />
     </Sidebar>
   )

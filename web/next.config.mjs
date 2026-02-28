@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080'
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? 'ws://localhost:8080'
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:8001'
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? 'ws://127.0.0.1:8001'
 
 const cspDirectives = [
   "default-src 'self'",

@@ -1,4 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from pathlib import Path
+from typing import Optional
+from uuid import uuid4
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from forensicstack.core.database import get_db
@@ -15,8 +19,8 @@ router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
 @router.get("/tools")
 async def list_tools(_: User = Depends(get_current_user)):
     """
-    List all available forensic tools registered in the plugin registry.
-    These are the valid values for the `tool` field in /jobs/submit.
+    List all available forensic tools registered in the plugin registry,
+    including their features (specific commands/sub-analyses).
     """
     tools = []
     for name, config in PLUGIN_REGISTRY.items():
@@ -27,6 +31,7 @@ async def list_tools(_: User = Depends(get_current_user)):
             "memory": config.get("memory"),
             "cpus": config.get("cpus"),
             "timeout_seconds": config.get("timeout"),
+            "features": config.get("features", []),
         })
     return {"tools": tools, "total": len(tools)}
 
@@ -71,6 +76,53 @@ async def submit(
         "findings": None,
         "output_prefix": None,
         "error": None,
+    }
+
+
+@router.post("/direct", status_code=202)
+async def direct_analyze(
+    file: UploadFile = File(...),
+    tool: str = Form(...),
+    feature: Optional[str] = Form(None),
+    _: User = Depends(get_current_user),
+):
+    """
+    Upload a file and immediately submit a forensic analysis job.
+
+    No case management required — the file is written to a temporary
+    directory accessible by the worker and cleaned up after the job runs.
+
+    - **file**: the artifact to analyse (memory dump, mobile backup, etc.)
+    - **tool**: tool name from the plugin registry (volatility, exiftool, …)
+    - **feature**: specific feature/plugin to run (e.g. windows.pslist for volatility)
+    """
+    if tool not in PLUGIN_REGISTRY:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown tool '{tool}'. Available: {list(PLUGIN_REGISTRY.keys())}",
+        )
+
+    # Write the uploaded file to a local temp dir (shared with the worker)
+    upload_dir = Path("tmp_jobs") / "uploads" / str(uuid4())
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    safe_filename = Path(file.filename).name if file.filename else "upload"
+    file_path = upload_dir / safe_filename
+
+    content = await file.read()
+    file_path.write_bytes(content)
+
+    job_id = submit_job(
+        tool=tool,
+        input_path=str(file_path),
+        input_type=feature,
+    )
+
+    return {
+        "job_id": job_id,
+        "filename": safe_filename,
+        "size_bytes": len(content),
+        "tool": tool,
+        "feature": feature,
     }
 
 

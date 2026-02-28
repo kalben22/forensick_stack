@@ -1,5 +1,12 @@
 import { apiClient } from './client'
 
+export interface ToolFeature {
+  id: string
+  label: string
+  description: string
+  accepted_extensions: string[]
+}
+
 export interface ToolInfo {
   name: string
   category: string
@@ -8,6 +15,7 @@ export interface ToolInfo {
   timeout: number
   description?: string
   image?: string
+  features?: ToolFeature[]
 }
 
 export interface JobSubmitRequest {
@@ -23,9 +31,17 @@ export interface JobSubmitResponse {
   artifact_id: number
 }
 
+export interface DirectAnalyzeResponse {
+  job_id: string
+  filename: string
+  size_bytes: number
+  tool: string
+  feature: string | null
+}
+
 export interface JobStatusResponse {
   job_id: string
-  status: 'queued' | 'running' | 'normalizing' | 'done' | 'failed'
+  status: 'queued' | 'running' | 'normalizing' | 'completed' | 'done' | 'failed'
   tool?: string
   artifact_id?: number
   progress?: number
@@ -44,6 +60,28 @@ export const jobsApi = {
 
   submit: async (payload: JobSubmitRequest): Promise<JobSubmitResponse> => {
     const { data } = await apiClient.post<JobSubmitResponse>('/api/v1/jobs/submit', payload)
+    return data
+  },
+
+  directAnalyze: async (
+    file: File,
+    tool: string,
+    feature: string | undefined,
+    onProgress?: (pct: number) => void,
+  ): Promise<DirectAnalyzeResponse> => {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('tool', tool)
+    if (feature) form.append('feature', feature)
+    const { data } = await apiClient.post<DirectAnalyzeResponse>(
+      '/api/v1/jobs/direct',
+      form,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (e) =>
+          onProgress?.(Math.round((e.loaded * 100) / (e.total ?? 1))),
+      },
+    )
     return data
   },
 

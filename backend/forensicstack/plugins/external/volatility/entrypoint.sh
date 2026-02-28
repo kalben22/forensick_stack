@@ -7,7 +7,8 @@
 #   /output  (rw) — results will be written here as JSON files
 #
 # Environment:
-#   JOB_ID   — used to prefix output filenames (set by DockerExecutor)
+#   JOB_ID            — used to prefix output filenames (set by DockerExecutor)
+#   VOLATILITY_PLUGIN — specific plugin to run (default: windows.pslist)
 # =============================================================================
 set -euo pipefail
 
@@ -27,22 +28,13 @@ fi
 echo "[volatility] Input: $INPUT_FILE"
 echo "[volatility] Job: $JOB_ID"
 
-# Standard plugin set — run each and capture JSON output.
-# Failures are tolerated (|| true) so a single plugin error does not abort.
-PLUGINS=(
-    "windows.pslist"
-    "windows.cmdline"
-    "windows.netscan"
-    "windows.dlllist"
-    "windows.malfind"
-)
+# Read plugin from env var — default to windows.pslist if not set
+PLUGIN="${VOLATILITY_PLUGIN:-windows.pslist}"
+safe_name="${PLUGIN//./_}"
+outfile="${OUTPUT_DIR}/${JOB_ID}_${safe_name}.json"
 
-for plugin in "${PLUGINS[@]}"; do
-    safe_name="${plugin//./_}"
-    outfile="${OUTPUT_DIR}/${JOB_ID}_${safe_name}.json"
-    echo "[volatility] Running: $plugin"
-    python "$VOL" -f "$INPUT_FILE" --renderer json "$plugin" \
-        > "$outfile" 2>/dev/null || true
-done
+echo "[volatility] Running: $PLUGIN"
+python "$VOL" -f "$INPUT_FILE" --renderer json "$PLUGIN" \
+    > "$outfile" 2>/dev/null || true
 
-echo "[volatility] Done — results in $OUTPUT_DIR"
+echo "[volatility] Done — result in $outfile"
