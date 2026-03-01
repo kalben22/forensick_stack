@@ -54,4 +54,21 @@ class VolatilityNormalizer(BaseNormalizer):
                     )
                 )
 
+        # If no findings were produced, check for .log files with Volatility errors
+        # so the UI can show the actual reason (missing symbols, bad format, etc.)
+        if not findings:
+            for log_file in Path(output_dir).glob("*.log"):
+                content = log_file.read_text(encoding="utf-8").strip()
+                if content:
+                    findings.append(
+                        Finding(
+                            tool="volatility",
+                            artifact_type="_error",
+                            source="memory",
+                            timestamp=None,
+                            data={"message": content},
+                            confidence=0.0,
+                        )
+                    )
+
         return findings

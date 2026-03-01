@@ -475,55 +475,80 @@ export function ToolDetailPage({ slug }: Props) {
                     )}
 
                     {/* Findings */}
-                    {isDone && (
-                      jobData?.findings && jobData.findings.length > 0 ? (
+                    {isDone && (() => {
+                      const findings = jobData?.findings as Array<Record<string, unknown>> | undefined
+                      if (!findings || findings.length === 0) {
+                        return (
+                          <div className="rounded-lg border border-border/30 bg-card/30 p-3 text-xs font-mono text-muted-foreground">
+                            Aucun résultat retourné. Vérifiez que le fichier est compatible avec la feature sélectionnée et que l&apos;image Docker de l&apos;outil est bien buildée.
+                          </div>
+                        )
+                      }
+
+                      // Error finding from tool (e.g. Volatility missing symbols)
+                      const first = findings[0]
+                      if (first?.artifact_type === '_error') {
+                        const msg = (first.data as Record<string, string>)?.message ?? ''
+                        return (
+                          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 flex flex-col gap-2">
+                            <p className="text-xs font-mono font-semibold text-amber-400 flex items-center gap-1">
+                              <XCircle className="size-3" />
+                              L&apos;outil a terminé sans résultat — message de l&apos;outil :
+                            </p>
+                            <ScrollArea className="max-h-48">
+                              <pre className="text-[10px] font-mono text-amber-300/80 whitespace-pre-wrap break-all leading-relaxed">
+                                {msg}
+                              </pre>
+                            </ScrollArea>
+                          </div>
+                        )
+                      }
+
+                      // Normal results table
+                      const dataKeys = first?.data && typeof first.data === 'object' && !Array.isArray(first.data)
+                        ? Object.keys(first.data as Record<string, unknown>)
+                        : null
+                      return (
                         <div className="flex flex-col gap-2">
                           <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-                            {jobData.findings.length} résultat{jobData.findings.length !== 1 ? 's' : ''}
+                            {findings.length} résultat{findings.length !== 1 ? 's' : ''}
                           </p>
-                          {/* Table view when rows have a .data object (Volatility format) */}
-                          {(() => {
-                            const first = jobData.findings[0] as Record<string, unknown>
-                            const dataKeys = first?.data && typeof first.data === 'object' && !Array.isArray(first.data)
-                              ? Object.keys(first.data as Record<string, unknown>)
-                              : null
-                            return dataKeys ? (
-                              <ScrollArea className="max-h-96 rounded-lg border border-border/30 bg-background/50">
-                                <div className="overflow-x-auto">
-                                  <table className="w-full text-[10px] font-mono">
-                                    <thead>
-                                      <tr className="border-b border-border/30 bg-card/50 sticky top-0">
-                                        {dataKeys.map((col) => (
-                                          <th key={col} className="px-2 py-1.5 text-left text-muted-foreground whitespace-nowrap font-semibold uppercase tracking-wider">
-                                            {col}
-                                          </th>
+                          {dataKeys ? (
+                            <ScrollArea className="max-h-96 rounded-lg border border-border/30 bg-background/50">
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-[10px] font-mono">
+                                  <thead>
+                                    <tr className="border-b border-border/30 bg-card/50 sticky top-0">
+                                      {dataKeys.map((col) => (
+                                        <th key={col} className="px-2 py-1.5 text-left text-muted-foreground whitespace-nowrap font-semibold uppercase tracking-wider">
+                                          {col}
+                                        </th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {findings.map((f, i) => (
+                                      <tr key={i} className="border-b border-border/20 hover:bg-card/30 transition-colors">
+                                        {Object.values(f.data as Record<string, unknown>).map((val, j) => (
+                                          <td key={j} className="px-2 py-1 whitespace-nowrap text-foreground/80">
+                                            {val === null || val === undefined
+                                              ? <span className="text-muted-foreground/40">—</span>
+                                              : String(val)}
+                                          </td>
                                         ))}
                                       </tr>
-                                    </thead>
-                                    <tbody>
-                                      {(jobData.findings as Array<Record<string, unknown>>).map((f, i) => (
-                                        <tr key={i} className="border-b border-border/20 hover:bg-card/30 transition-colors">
-                                          {Object.values(f.data as Record<string, unknown>).map((val, j) => (
-                                            <td key={j} className="px-2 py-1 whitespace-nowrap text-foreground/80">
-                                              {val === null || val === undefined
-                                                ? <span className="text-muted-foreground/40">—</span>
-                                                : String(val)}
-                                            </td>
-                                          ))}
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </ScrollArea>
-                            ) : (
-                              <ScrollArea className="max-h-72 rounded-lg border border-border/30 bg-background/50">
-                                <pre className="p-3 text-[11px] font-mono leading-relaxed whitespace-pre-wrap break-all">
-                                  {JSON.stringify(jobData.findings, null, 2)}
-                                </pre>
-                              </ScrollArea>
-                            )
-                          })()}
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </ScrollArea>
+                          ) : (
+                            <ScrollArea className="max-h-72 rounded-lg border border-border/30 bg-background/50">
+                              <pre className="p-3 text-[11px] font-mono leading-relaxed whitespace-pre-wrap break-all">
+                                {JSON.stringify(findings, null, 2)}
+                              </pre>
+                            </ScrollArea>
+                          )}
                           <Button
                             onClick={handleDownload}
                             variant="outline"
@@ -534,12 +559,8 @@ export function ToolDetailPage({ slug }: Props) {
                             Télécharger les résultats (JSON)
                           </Button>
                         </div>
-                      ) : (
-                        <div className="rounded-lg border border-border/30 bg-card/30 p-3 text-xs font-mono text-muted-foreground">
-                          Aucun résultat retourné. Vérifiez que le fichier est compatible avec la feature sélectionnée et que l&apos;image Docker de l&apos;outil est bien buildée.
-                        </div>
                       )
-                    )}
+                    })()}
                   </CardContent>
                 </Card>
               )}
