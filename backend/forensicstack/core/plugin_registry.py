@@ -42,6 +42,10 @@ PLUGIN_REGISTRY = {
         "memory": "6g",
         "cpus": "2",
         "timeout": 7200,
+        # Volatility 3 downloads symbol tables (ISF) on first run → needs network
+        # and must write its cache to ~/.cache/volatility3 → disable read-only
+        "network": "bridge",
+        "readonly": False,
         "features": [
             {
                 "id": "windows.pslist",

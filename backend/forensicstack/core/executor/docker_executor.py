@@ -35,25 +35,38 @@ class DockerExecutor:
         # pass JOB_ID to have predictable output filename
         envs += ["-e", f"JOB_ID={job_id}", "-e", "INPUT_PATH=/data", "-e", "OUTPUT_PATH=/output"]
 
+        network   = plugin.get("network", "none")
+        readonly  = plugin.get("readonly", True)
+        extra_tmp = plugin.get("extra_tmpfs", [])
+
         cmd = [
             "docker", "run", "--rm",
-            "--network", "none",
+            "--network", network,
             f"--memory={memory}",
             f"--cpus={cpus}",
-            "--read-only",
-            "--tmpfs=/tmp:rw,size=64m",
             "--pids-limit=200",
             "--cap-drop=ALL",
-            "--security-opt","no-new-privileges"
-        ] + envs + [
+            "--security-opt", "no-new-privileges",
+            "--tmpfs=/tmp:rw,size=64m",
+        ]
+        if readonly:
+            cmd.append("--read-only")
+        for t in extra_tmp:
+            cmd += ["--tmpfs", t]
+        cmd += envs + [
             "-v", f"{job_in.resolve()}:/data:ro",
             "-v", f"{job_out.resolve()}:/output",
             image
         ]
 
         try:
-            subprocess.run(cmd, check=True, text=True, capture_output=True, timeout=timeout or plugin.get("timeout",600))
+            result = subprocess.run(cmd, check=True, text=True, capture_output=True,
+                                    timeout=timeout or plugin.get("timeout", 600))
+            if result.stdout:
+                print(result.stdout, end="")
         except subprocess.CalledProcessError as e:
+            if e.stdout:
+                print(e.stdout, end="")
             raise RuntimeError(f"container failed: {e.stderr}") from e
         except subprocess.TimeoutExpired as e:
             raise RuntimeError("container timed out") from e
