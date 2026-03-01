@@ -127,7 +127,7 @@ export function ToolDetailPage({ slug }: Props) {
 
   const validateFile = useCallback(
     (f: File): string | null => {
-      if (f.size > 2 * 1024 ** 3) return 'File exceeds 2 GB limit.'
+      if (f.size > 5 * 1024 ** 3) return 'File exceeds 5 GB limit.'
       if (!selectedFeature) return null
       const exts = selectedFeature.accepted_extensions
       if (exts.includes('*')) return null
@@ -381,8 +381,8 @@ export function ToolDetailPage({ slug }: Props) {
                           </p>
                           <p className="text-xs text-muted-foreground font-mono mt-0.5">
                             {selectedFeature.accepted_extensions.includes('*')
-                              ? 'Tous types de fichiers acceptés · Max 2 GB'
-                              : `${selectedFeature.accepted_extensions.join(', ')} · Max 2 GB`
+                              ? 'Tous types de fichiers acceptés · Max 5 GB'
+                              : `${selectedFeature.accepted_extensions.join(', ')} · Max 5 GB`
                             }
                           </p>
                         </div>

@@ -102,14 +102,27 @@ async def direct_analyze(
             detail=f"Unknown tool '{tool}'. Available: {list(PLUGIN_REGISTRY.keys())}",
         )
 
-    # Write the uploaded file to a local temp dir (shared with the worker)
+    MAX_UPLOAD_BYTES = 5 * 1024 ** 3  # 5 GB
+
+    # Write the uploaded file to a local temp dir (shared with the worker).
+    # Stream in 1 MB chunks so a 5 GB dump never fully resides in RAM.
     upload_dir = Path("tmp_jobs") / "uploads" / str(uuid4())
     upload_dir.mkdir(parents=True, exist_ok=True)
     safe_filename = Path(file.filename).name if file.filename else "upload"
     file_path = upload_dir / safe_filename
 
-    content = await file.read()
-    file_path.write_bytes(content)
+    written = 0
+    with open(file_path, "wb") as out:
+        while True:
+            chunk = await file.read(1024 * 1024)  # 1 MB per read
+            if not chunk:
+                break
+            written += len(chunk)
+            if written > MAX_UPLOAD_BYTES:
+                file_path.unlink(missing_ok=True)
+                upload_dir.rmdir()
+                raise HTTPException(status_code=413, detail="File exceeds the 5 GB upload limit.")
+            out.write(chunk)
 
     job_id = submit_job(
         tool=tool,
@@ -120,7 +133,7 @@ async def direct_analyze(
     return {
         "job_id": job_id,
         "filename": safe_filename,
-        "size_bytes": len(content),
+        "size_bytes": written,
         "tool": tool,
         "feature": feature,
     }

@@ -69,7 +69,7 @@ services:
       dockerfile: Dockerfile
     image: forensicstack/backend:dev
     container_name: fs_backend
-    command: uvicorn forensicstack.api.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn forensicstack.api.main:app --host 0.0.0.0 --port 8000 --reload --timeout-keep-alive 600
     depends_on:
       postgres:
         condition: service_healthy
