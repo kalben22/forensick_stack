@@ -1,9 +1,8 @@
 # =============================================================================
 # ForensicStack - Seed Volatility3 Windows symbol tables (run ONCE)
 #
-# Two-phase download to avoid connection resets on slow/restricted networks:
-#   Phase 1 - blobless clone: only tree/commit metadata (~5-20 MB)
-#   Phase 2 - checkout: only blobs for the 4 NT kernel PDB dirs (~200-400 MB)
+# Phase 1: git fetch --filter=blob:none  =>  metadata only (~900 KB, fast)
+# Phase 2: git checkout FETCH_HEAD -- <paths>  =>  blobs only for 4 PDB dirs
 #
 # Usage (from repo root or scripts\ folder):
 #   .\scripts\seed-vol3-symbols.ps1
@@ -15,8 +14,7 @@ $ErrorActionPreference = "Stop"
 $Repo   = "https://github.com/Abyss-W4tcher/volatility3-symbols.git"
 $Volume = "forensicstack_vol3_symbols"
 
-Write-Host "[ForensicStack] Phase 1/2 - Downloading repo metadata (no blobs yet)..."
-Write-Host "               This is fast (~5-20 MB)"
+Write-Host "[ForensicStack] Phase 1/2 - Fetching repo metadata (~900 KB)..."
 
 $TmpDir = Join-Path $env:TEMP ("vol3-" + [System.Guid]::NewGuid().ToString("N").Substring(0, 8))
 New-Item -ItemType Directory -Path $TmpDir | Out-Null
@@ -24,39 +22,37 @@ New-Item -ItemType Directory -Path $TmpDir | Out-Null
 try {
     Push-Location $TmpDir
 
-    # Increase git http buffer to survive large packs on slow connections
     git config --global http.postBuffer 524288000
     git config --global http.lowSpeedLimit 1000
     git config --global http.lowSpeedTime 300
 
-    # Phase 1: blobless clone (metadata only - fast)
-    git clone --depth 1 --filter=blob:none --no-checkout $Repo .
-    if ($LASTEXITCODE -ne 0) { throw "git clone failed" }
+    # Initialize bare repo and fetch metadata only (no blobs)
+    git init .
+    git remote add origin $Repo
+    git fetch --depth 1 --filter=blob:none origin master
+    if ($LASTEXITCODE -ne 0) { throw "git fetch failed" }
 
-    # Configure sparse checkout BEFORE checkout so only the 4 PDB dirs are fetched
-    git sparse-checkout init --cone
-    git sparse-checkout set `
+    Write-Host ""
+    Write-Host "[ForensicStack] Phase 2/2 - Downloading symbol blobs for 4 NT kernel PDB dirs..."
+
+    # Directly checkout specific paths from FETCH_HEAD
+    # This forces git to fetch the blobs for those exact paths only
+    git checkout FETCH_HEAD -- `
         windows/ntkrnlmp.pdb `
         windows/ntkrpamp.pdb `
         windows/ntoskrnl.pdb `
         windows/ntkrnlpa.pdb
-    if ($LASTEXITCODE -ne 0) { throw "git sparse-checkout set failed" }
-
-    Write-Host ""
-    Write-Host "[ForensicStack] Phase 2/2 - Downloading symbol blobs (~200-400 MB)..."
-    Write-Host "               Only the 4 NT kernel PDB directories"
-
-    # Checkout triggers blob download for the sparse paths only
-    git checkout HEAD
-    if ($LASTEXITCODE -ne 0) { throw "git checkout HEAD failed" }
+    if ($LASTEXITCODE -ne 0) { throw "git checkout (paths) failed" }
 
     Pop-Location
 
-    # Verify the windows/ directory was populated
     $WinDir = Join-Path $TmpDir "windows"
     if (-not (Test-Path $WinDir)) {
-        throw "windows/ directory not found after checkout - sparse checkout did not populate files"
+        throw "windows/ was not created - checkout did not populate files"
     }
+
+    $count = (Get-ChildItem $WinDir -Recurse -File).Count
+    Write-Host "  $count symbol files downloaded."
 
     $SrcPath = $WinDir.Replace("\", "/")
 
