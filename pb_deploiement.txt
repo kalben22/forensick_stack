@@ -1,0 +1,404 @@
+PS C:\Users\Bocal\Downloads\forensick_stack-main\backend> docker compose up -d postgres redis minio chromadb
+time="2026-03-01T00:07:11+01:00" level=warning msg="C:\\Users\\Bocal\\Downloads\\forensick_stack-main\\backend\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+
+
+(venv) PS C:\Users\Bocal\Downloads\forensick_stack-main\backend> uvicorn.exe forensicstack.api.main:app --host 0.0.0.0 --port 8080 --reload
+INFO:     Will watch for changes in these directories: ['C:\\Users\\Bocal\\Downloads\\forensick_stack-main\\backend']
+INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+INFO:     Started reloader process [16440] using WatchFiles
+Database URL: postgresql://forensicstack:***@localhost:5433/forensicstack
+Process SpawnProcess-1:
+Traceback (most recent call last):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\multiprocessing\process.py", line 313, in _bootstrap
+    self.run()
+    ~~~~~~~~^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\multiprocessing\process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Bocal\Downloads\forensick_stack-main\backend\venv\Lib\site-packages\uvicorn\_subprocess.py", line 80, in subprocess_started        
+    target(sockets=sockets)
+    ~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\Bocal\Downloads\forensick_stack-main\backend\venv\Lib\site-packages\uvicorn\server.py", line 75, in run
+    return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 195, in run  
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 118, in run  
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\asyncio\base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "C:\Users\Bocal\Downloads\forensick_stack-main\backend\venv\Lib\site-packages\uvicorn\server.py", line 79, in serve
+    await self._serve(sockets)
+  File "C:\Users\Bocal\Downloads\forensick_stack-main\backend\venv\Lib\site-packages\uvicorn\server.py", line 86, in _serve
+    config.load()
+    ~~~~~~~~~~~^^
+  File "C:\Users\Bocal\Downloads\forensick_stack-main\backend\venv\Lib\site-packages\uvicorn\config.py", line 441, in load
+    self.loaded_app = import_from_string(self.app)
+                      ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\Bocal\Downloads\forensick_stack-main\backend\venv\Lib\site-packages\uvicorn\importer.py", line 22, in import_from_string
+    raise exc from None
+  File "C:\Users\Bocal\Downloads\forensick_stack-main\backend\venv\Lib\site-packages\uvicorn\importer.py", line 19, in import_from_string
+    module = importlib.import_module(module_str)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\importlib\__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1023, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "C:\Users\Bocal\Downloads\forensick_stack-main\backend\forensicstack\api\main.py", line 7, in <module>
+    from forensicstack.api.routes import cases, analysis, auth, artifacts, jobs, search
+  File "C:\Users\Bocal\Downloads\forensick_stack-main\backend\forensicstack\api\routes\cases.py", line 5, in <module>
+    from forensicstack.core.database import get_db
+  File "C:\Users\Bocal\Downloads\forensick_stack-main\backend\forensicstack\core\database.py", line 20, in <module>
+    engine = create_engine(
+        DATABASE_URL,
+    ...<3 lines>...
+        max_overflow=20
+    )
+  File "<string>", line 2, in create_engine
+  File "C:\Users\Bocal\Downloads\forensick_stack-main\backend\venv\Lib\site-packages\sqlalchemy\util\deprecations.py", line 281, in warned
+    return fn(*args, **kwargs)  # type: ignore[no-any-return]
+  File "C:\Users\Bocal\Downloads\forensick_stack-main\backend\venv\Lib\site-packages\sqlalchemy\engine\create.py", line 617, in create_engine       
+    dbapi = dbapi_meth(**dbapi_args)
+  File "C:\Users\Bocal\Downloads\forensick_stack-main\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\psycopg2.py", line 696, in import_dbapi
+    import psycopg2
+ModuleNotFoundError: No module named 'psycopg2'
+
+
+[notice] A new release of pip is available: 25.3 -> 26.0.1
+[notice] To update, run: python.exe -m pip install --upgrade pip
+ERROR: Could not open requirements file: [Errno 2] No such file or directory: 'psycopg2'
+(venv) PS C:\Users\Bocal\Downloads\forensick_stack-main\backend> python.exe -m pip install --upgrade pip
+Requirement already satisfied: pip in c:\users\bocal\downloads\forensick_stack-main\backend\venv\lib\site-packages (25.3)
+Collecting pip
+  Downloading pip-26.0.1-py3-none-any.whl.metadata (4.7 kB)
+Downloading pip-26.0.1-py3-none-any.whl (1.8 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.8/1.8 MB 642.0 kB/s  0:00:02
+Installing collected packages: pip
+  Attempting uninstall: pip
+    Found existing installation: pip 25.3
+    Uninstalling pip-25.3:
+      Successfully uninstalled pip-25.3
+Successfully installed pip-26.0.1
+(venv) PS C:\Users\Bocal\Downloads\forensick_stack-main\backend> pip install -r psycopg2
+ERROR: Could not open requirements file: [Errno 2] No such file or directory: 'psycopg2'
+(venv) PS C:\Users\Bocal\Downloads\forensick_stack-main\backend> 
+
+
+
+
+(venv) PS C:\Users\Bocal\Downloads\forensick_stack-main\backend> python -m forensicstack.worker
+Database URL: postgresql://forensicstack:***@localhost:5433/forensicstack
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\Bocal\Downloads\forensick_stack-main\backend\forensicstack\worker.py", line 24, in <module>
+    if not minio_client.bucket_exists(BUCKET):
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "C:\Users\Bocal\Downloads\forensick_stack-main\backend\venv\Lib\site-packages\minio\api.py", line 700, in bucket_exists
+    self._execute("HEAD", bucket_name)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Bocal\Downloads\forensick_stack-main\backend\venv\Lib\site-packages\minio\api.py", line 441, in _execute
+    region = self._get_region(bucket_name)
+  File "C:\Users\Bocal\Downloads\forensick_stack-main\backend\venv\Lib\site-packages\minio\api.py", line 498, in _get_region
+    response = self._url_open(
+        "GET",
+    ...<2 lines>...
+        query_params={"location": ""},
+    )
+  File "C:\Users\Bocal\Downloads\forensick_stack-main\backend\venv\Lib\site-packages\minio\api.py", line 427, in _url_open
+    raise response_error
+minio.error.S3Error: S3 operation failed; code: SignatureDoesNotMatch, message: The request signature we calculated does not match the signature you provided. Check your key and signing method., resource: /forensic-outputs, request_id: 1898B10A771F95D3, host_id: dd9025bab4ad464b049177c95eb6ebf374d3b3fd1af9251148b658df7ac2e3e8, bucket_name: forensic-outputs
+(venv) PS C:\Users\Bocal\Downloads\forensick_stack-main\backend> 
+
+
+
+Bocal@DESKTOP-GKQQS4C MINGW64 ~/Downloads/forensick_stack-main/web
+$ npm i
+npm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
+npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+npm warn deprecated glob@10.3.10: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+npm warn deprecated @humanwhocodes/object-schema@2.0.3: Use @eslint/object-schema instead
+npm warn deprecated @humanwhocodes/config-array@0.13.0: Use @eslint/config-array instead
+npm warn deprecated eslint@8.57.1: This version is no longer supported. Please see https://eslint.org/version-support for other options.
+npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+
+added 390 packages, and audited 512 packages in 3m
+
+154 packages are looking for funding
+  run `npm fund` for details
+
+4 high severity vulnerabilities
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+npm notice
+npm notice New minor version of npm available! 11.9.0 -> 11.11.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.11.0
+npm notice To update run: npm install -g npm@11.11.0
+npm notice
+
+Bocal@DESKTOP-GKQQS4C MINGW64 ~/Downloads/forensick_stack-main/web
+$ npm start build
+
+> forensicstack-web@0.1.0 start
+> next start build
+
+ ⨯ Invalid project directory provided, no such directory: C:\Users\Bocal\Downloads\forensick_stack-main\web\build
+
+Bocal@DESKTOP-GKQQS4C MINGW64 ~/Downloads/forensick_stack-main/web
+$ npm start
+
+> forensicstack-web@0.1.0 start
+> next start
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+
+ ✓ Starting...
+Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+    at setupFsCheck (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\server\lib\router-utils\filesystem.js:151:19)
+    at async initialize (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\server\lib\router-server.js:64:23)
+    at async Server.<anonymous> (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\server\lib\start-server.js:249:36)
+
+Bocal@DESKTOP-GKQQS4C MINGW64 ~/Downloads/forensick_stack-main/web
+$ npm start
+
+> forensicstack-web@0.1.0 start
+> next start
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+
+ ✓ Starting...
+Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+    at setupFsCheck (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\server\lib\router-utils\filesystem.js:151:19)
+    at async initialize (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\server\lib\router-server.js:64:23)
+    at async Server.<anonymous> (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\server\lib\start-server.js:249:36)
+
+Bocal@DESKTOP-GKQQS4C MINGW64 ~/Downloads/forensick_stack-main/web
+$ npm build
+Unknown command: "build"
+
+
+Did you mean this?
+  npm run build # run the "build" package script
+To see a list of supported npm commands, run:
+  npm help
+
+Bocal@DESKTOP-GKQQS4C MINGW64 ~/Downloads/forensick_stack-main/web
+$ npm run build
+
+> forensicstack-web@0.1.0 build
+> next build
+
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+  ▲ Next.js 14.2.35
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+Failed to compile.
+
+app\layout.tsx
+An error occurred in `next/font`.
+
+Error: Cannot find module 'C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\jiti\lib\jiti.cjs'
+    at createEsmNotFoundErr (node:internal/modules/cjs/loader:1493:15)
+    at finalizeEsmResolution (node:internal/modules/cjs/loader:1482:9)
+    at resolveExports (node:internal/modules/cjs/loader:685:14)
+    at Module._findPath (node:internal/modules/cjs/loader:752:31)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1441:27)
+    at C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\server\require-hook.js:55:36
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1066:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1071:22)
+    at Module._load (node:internal/modules/cjs/loader:1242:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+
+app\layout.tsx
+An error occurred in `next/font`.
+
+Error: Cannot find module 'C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\jiti\lib\jiti.cjs'
+    at createEsmNotFoundErr (node:internal/modules/cjs/loader:1493:15)
+    at finalizeEsmResolution (node:internal/modules/cjs/loader:1482:9)
+    at resolveExports (node:internal/modules/cjs/loader:685:14)
+    at Module._findPath (node:internal/modules/cjs/loader:752:31)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1441:27)
+    at C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\server\require-hook.js:55:36
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1066:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1071:22)
+    at Module._load (node:internal/modules/cjs/loader:1242:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+
+./node_modules/zustand/esm/index.mjs
+Module not found: Can't resolve 'zustand/react'
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./lib/stores/auth-store.ts
+./app/(dashboard)/layout.tsx
+
+
+> Build failed because of webpack errors
+
+Bocal@DESKTOP-GKQQS4C MINGW64 ~/Downloads/forensick_stack-main/web
+$ npm run dev
+
+> forensicstack-web@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 4.2s
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 605ms (72 modules)
+ ○ Compiling /login ...
+The user aborted a request.
+
+Retrying 1/3...
+ ⨯ app\layout.tsx
+An error occurred in `next/font`.
+
+Error: Cannot find module 'C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\jiti\lib\jiti.cjs'
+    at createEsmNotFoundErr (node:internal/modules/cjs/loader:1493:15)
+    at finalizeEsmResolution (node:internal/modules/cjs/loader:1482:9)
+    at resolveExports (node:internal/modules/cjs/loader:685:14)
+    at Module._findPath (node:internal/modules/cjs/loader:752:31)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1441:27)
+    at C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\server\require-hook.js:55:36
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1066:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1071:22)
+    at Module._load (node:internal/modules/cjs/loader:1242:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1556:12)
+    at mod.require (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\server\require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\@tailwindcss\node\dist\index.js:1:1269)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1556:12)
+    at mod.require (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\server\require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\@tailwindcss\postcss\dist\index.js:1:1328)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1556:12)
+    at mod.require (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\server\require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+    at C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\build\webpack\config\blocks\css\plugins.js:60:48
+    at plugin (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\build\webpack\config\blocks\css\plugins.js:30:44)
+    at Processor.normalize (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\node_modules\postcss\lib\processor.js:18:13)
+    at new Processor (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\node_modules\postcss\lib\processor.js:11:25)
+    at postcss (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\node_modules\postcss\lib\postcss.js:26:10)
+    at C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\build\webpack\config\blocks\css\index.js:127:37
+    at async C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\build\webpack\loaders\next-font-loader\index.js:86:33
+    at async Span.traceAsyncFn (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\trace\trace.js:154:20)
+ ⨯ app\layout.tsx
+An error occurred in `next/font`.
+
+Error: Cannot find module 'C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\jiti\lib\jiti.cjs'
+    at createEsmNotFoundErr (node:internal/modules/cjs/loader:1493:15)
+    at finalizeEsmResolution (node:internal/modules/cjs/loader:1482:9)
+    at resolveExports (node:internal/modules/cjs/loader:685:14)
+    at Module._findPath (node:internal/modules/cjs/loader:752:31)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1441:27)
+    at C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\server\require-hook.js:55:36
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1066:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1071:22)
+    at Module._load (node:internal/modules/cjs/loader:1242:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1556:12)
+    at mod.require (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\server\require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\@tailwindcss\node\dist\index.js:1:1269)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1556:12)
+    at mod.require (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\server\require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\@tailwindcss\postcss\dist\index.js:1:1328)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1556:12)
+    at mod.require (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\server\require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+    at C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\build\webpack\config\blocks\css\plugins.js:60:48
+    at plugin (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\build\webpack\config\blocks\css\plugins.js:30:44)
+    at Processor.normalize (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\node_modules\postcss\lib\processor.js:18:13)
+    at new Processor (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\node_modules\postcss\lib\processor.js:11:25)
+    at postcss (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\node_modules\postcss\lib\postcss.js:26:10)
+    at C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\build\webpack\config\blocks\css\index.js:127:37
+    at async C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\build\webpack\loaders\next-font-loader\index.js:86:33
+    at async Span.traceAsyncFn (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\trace\trace.js:154:20)
+ ⨯ app\layout.tsx
+An error occurred in `next/font`.
+
+Error: Cannot find module 'C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\jiti\lib\jiti.cjs'
+    at createEsmNotFoundErr (node:internal/modules/cjs/loader:1493:15)
+    at finalizeEsmResolution (node:internal/modules/cjs/loader:1482:9)
+    at resolveExports (node:internal/modules/cjs/loader:685:14)
+    at Module._findPath (node:internal/modules/cjs/loader:752:31)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1441:27)
+    at C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\server\require-hook.js:55:36
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1066:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1071:22)
+    at Module._load (node:internal/modules/cjs/loader:1242:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1556:12)
+    at mod.require (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\server\require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\@tailwindcss\node\dist\index.js:1:1269)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1556:12)
+    at mod.require (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\server\require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\@tailwindcss\postcss\dist\index.js:1:1328)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1556:12)
+    at mod.require (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\server\require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+    at C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\build\webpack\config\blocks\css\plugins.js:60:48
+    at plugin (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\build\webpack\config\blocks\css\plugins.js:30:44)
+    at Processor.normalize (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\node_modules\postcss\lib\processor.js:18:13)
+    at new Processor (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\node_modules\postcss\lib\processor.js:11:25)
+    at postcss (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\node_modules\postcss\lib\postcss.js:26:10)
+    at C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\build\webpack\config\blocks\css\index.js:127:37
+    at async C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\build\webpack\loaders\next-font-loader\index.js:86:33
+    at async Span.traceAsyncFn (C:\Users\Bocal\Downloads\forensick_stack-main\web\node_modules\next\dist\trace\trace.js:154:20)
+ GET /login 500 in 20006ms
+ GET /login 500 in 31ms
+ GET /login 500 in 21ms
