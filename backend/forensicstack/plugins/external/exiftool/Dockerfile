@@ -14,7 +14,7 @@ RUN apt-get update && \
 RUN mkdir -p /output && chmod 0777 /output
 
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN sed -i 's/\r//' /entrypoint.sh && chmod +x /entrypoint.sh
 
 # run as non-root user
 RUN useradd -m -u 1000 analyst || true

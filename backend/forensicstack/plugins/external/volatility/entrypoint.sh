@@ -32,9 +32,16 @@ echo "[volatility] Job: $JOB_ID"
 PLUGIN="${VOLATILITY_PLUGIN:-windows.pslist}"
 safe_name="${PLUGIN//./_}"
 outfile="${OUTPUT_DIR}/${JOB_ID}_${safe_name}.json"
+logfile="${OUTPUT_DIR}/${JOB_ID}_${safe_name}.log"
 
 echo "[volatility] Running: $PLUGIN"
 python "$VOL" -f "$INPUT_FILE" --renderer json "$PLUGIN" \
-    > "$outfile" 2>/dev/null || true
+    > "$outfile" 2>"$logfile" || true
+
+# Print captured errors so docker logs / worker can see them
+if [[ -s "$logfile" ]]; then
+    echo "[volatility] Stderr output:"
+    cat "$logfile"
+fi
 
 echo "[volatility] Done — result in $outfile"

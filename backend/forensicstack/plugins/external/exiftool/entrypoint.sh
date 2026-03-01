@@ -9,6 +9,12 @@ OUTFILE="${OUTPUT}/${JOB_ID}_raw.json"
 
 echo "[entrypoint] Running ExifTool"
 
-exiftool -json -charset UTF8 -r "$INPUT" > "$OUTFILE" 2>/dev/null || true
+LOGFILE="${OUTPUT}/${JOB_ID}_raw.log"
+exiftool -json -charset UTF8 -r "$INPUT" > "$OUTFILE" 2>"$LOGFILE" || true
+
+if [[ -s "$LOGFILE" ]]; then
+    echo "[exiftool] Stderr output:"
+    cat "$LOGFILE"
+fi
 
 echo "[entrypoint] Done"
