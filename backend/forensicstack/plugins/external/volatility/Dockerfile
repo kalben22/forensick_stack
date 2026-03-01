@@ -32,7 +32,7 @@ RUN pip install --no-cache-dir -e . && \
 # The sparse checkout fetches only the windows/ subtree, which keeps the
 # image size reasonable (no Linux/macOS symbols included).
 # ---------------------------------------------------------------------------
-RUN git clone --depth 1 --filter=blob:none --sparse \
+RUN git clone --depth 1 --sparse \
         https://github.com/Abyss-W4tcher/volatility3-symbols.git /tmp/vol3-symbols \
     && cd /tmp/vol3-symbols \
     && git sparse-checkout set windows \
