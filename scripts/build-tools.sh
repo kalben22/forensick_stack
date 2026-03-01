@@ -62,6 +62,14 @@ if [[ "$FILTER" == "all" || "$FILTER" == "volatility" ]]; then
     echo ""
 fi
 
+if [[ "$FILTER" == "all" || "$FILTER" == "eztools" ]]; then
+    echo ""
+    echo -e "${YELLOW}[build-tools] EZ Tools run natively on the Windows host — no Docker image needed.${NC}"
+    echo -e "${YELLOW}[build-tools] Install EZ Tools once on the Windows host with:${NC}"
+    echo -e "${GREEN}               .\\scripts\\install-eztools.ps1${NC}"
+    echo ""
+fi
+
 echo ""
 echo -e "${GREEN}All forensic tool images are ready.${NC}"
 echo "Verify with:  docker images | grep forensicstack"

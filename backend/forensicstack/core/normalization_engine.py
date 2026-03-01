@@ -2,6 +2,7 @@ from forensicstack.core.normalizers.exiftool_normalizer import ExiftoolNormalize
 from forensicstack.core.normalizers.ileapp_normalizer import ILEAPPNormalizer
 from forensicstack.core.normalizers.aleapp_normalizer import ALEAPPNormalizer
 from forensicstack.core.normalizers.volatility_normalizer import VolatilityNormalizer
+from forensicstack.core.normalizers.eztools_normalizer import EZToolsNormalizer
 
 
 NORMALIZER_REGISTRY = {
@@ -9,6 +10,7 @@ NORMALIZER_REGISTRY = {
     "ileapp": ILEAPPNormalizer(),
     "aleapp": ALEAPPNormalizer(),
     "volatility": VolatilityNormalizer(),
+    "eztools": EZToolsNormalizer(),
 }
 
 

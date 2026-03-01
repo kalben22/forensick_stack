@@ -100,4 +100,100 @@ PLUGIN_REGISTRY = {
             },
         ],
     },
+
+    "eztools": {
+        "category": "windows_artifacts",
+        # Runs directly on the Windows host — no Docker container.
+        # Install EZ Tools once with:  scripts\install-eztools.ps1
+        # Override tool directory via env var EZTOOLS_DIR (default C:\EZTools).
+        "executor": "native",
+        "env_var": "EZTOOL_PLUGIN",
+        "timeout": 1800,
+        "features": [
+            {
+                "id": "amcacheparser",
+                "label": "Amcache",
+                "description": "Analyse le fichier Amcache.hve — programmes exécutés, hashes SHA1, chemins, éditeurs. Clé pour détecter l'exécution de malwares.",
+                "accepted_extensions": [".hve"],
+            },
+            {
+                "id": "appcompatcache",
+                "label": "AppCompatCache (Shimcache)",
+                "description": "Extrait le Shimcache depuis la ruche SYSTEM — liste les exécutables ayant été présents sur le système (avec timestamps).",
+                "accepted_extensions": [".dat", "SYSTEM"],
+            },
+            {
+                "id": "evtx",
+                "label": "Windows Event Logs",
+                "description": "Parse les fichiers .evtx (journaux Windows) en entrées structurées : ID événement, source, utilisateur, message, timestamp.",
+                "accepted_extensions": [".evtx"],
+            },
+            {
+                "id": "jumplist",
+                "label": "Jump Lists",
+                "description": "Analyse les Jump Lists (fichiers récents par application) — révèle les fichiers ouverts par l'utilisateur et les timestamps d'accès.",
+                "accepted_extensions": [".automaticDestinations-ms", ".customDestinations-ms"],
+            },
+            {
+                "id": "lnk",
+                "label": "LNK (Shortcut) Files",
+                "description": "Analyse les fichiers .lnk (raccourcis Windows) — révèle le chemin cible, les timestamps et les métadonnées système de l'hôte source.",
+                "accepted_extensions": [".lnk"],
+            },
+            {
+                "id": "mft",
+                "label": "MFT (Master File Table)",
+                "description": "Parse la $MFT NTFS — liste complète de tous les fichiers/dossiers du volume avec timestamps MACB, taille, attributs et numéros d'inode.",
+                "accepted_extensions": ["$MFT", ".mft"],
+            },
+            {
+                "id": "prefetch",
+                "label": "Prefetch",
+                "description": "Analyse les fichiers Prefetch (.pf) — dernières exécutions (jusqu'à 8), compteur de lancements, DLLs et fichiers accédés au démarrage.",
+                "accepted_extensions": [".pf", ".gz"],
+            },
+            {
+                "id": "recyclebin",
+                "label": "Recycle Bin",
+                "description": "Récupère les entrées de la Corbeille ($I/$R) — fichiers supprimés, taille originale, chemin d'origine et timestamp de suppression.",
+                "accepted_extensions": ["*"],
+            },
+            {
+                "id": "registry",
+                "label": "Registry (RECmd)",
+                "description": "Analyse les ruches de registre Windows avec des centaines de plugins — clés de persistance, MRU, SAM, USB, services, logiciels installés.",
+                "accepted_extensions": [".dat", ".reg", "NTUSER.DAT", "SAM", "SYSTEM", "SOFTWARE", "SECURITY"],
+            },
+            {
+                "id": "shellbags",
+                "label": "ShellBags",
+                "description": "Extrait les ShellBags depuis NTUSER.DAT / UsrClass.dat — dossiers consultés par l'utilisateur, y compris sur supports amovibles ou réseau.",
+                "accepted_extensions": ["NTUSER.DAT", "UsrClass.dat", ".dat"],
+            },
+            {
+                "id": "sqlite",
+                "label": "SQLite Databases",
+                "description": "Requête forensique sur bases SQLite (Chrome history, Firefox places, Edge, WhatsApp, etc.) via des maps prédéfinies.",
+                "accepted_extensions": [".db", ".sqlite", ".sqlite3"],
+            },
+            {
+                "id": "srum",
+                "label": "SRUM (System Resource Usage)",
+                "description": "Parse SRUDB.dat — utilisation réseau, CPU et mémoire par application avec timestamps précis. Idéal pour profiler l'activité réseau d'un malware.",
+                "accepted_extensions": [".dat", "SRUDB.dat"],
+            },
+            {
+                "id": "bstrings",
+                "label": "BStrings (Strings Forensiques)",
+                "description": "Extrait les chaînes Unicode et ASCII d'un fichier binaire avec scoring de pertinence forensique (URLs, IPs, chemins, credentials…).",
+                "accepted_extensions": ["*"],
+            },
+            {
+                "id": "hasher",
+                "label": "Hasher (Empreintes Fichier)",
+                "description": "Calcule MD5, SHA1 et SHA256 d'un fichier pour l'identification et la comparaison avec des bases de hashes connus (VirusTotal, NSRL).",
+                "accepted_extensions": ["*"],
+            },
+        ],
+    },
 }

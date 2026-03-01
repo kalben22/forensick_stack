@@ -9,6 +9,7 @@ from minio import Minio
 load_dotenv()
 from forensicstack.core.plugin_registry import PLUGIN_REGISTRY
 from forensicstack.core.executor.docker_executor import DockerExecutor
+from forensicstack.core.executor.native_executor import NativeExecutor
 from forensicstack.core.normalization_engine import normalize
 
 REDIS_HOST = os.getenv("REDIS_HOST", "redis")
@@ -58,8 +59,11 @@ def worker_loop():
             if not plugin_conf:
                 raise Exception("Plugin not registered: " + tool)
 
-            # run plugin (creates local output folder)
-            output_dir = DockerExecutor.run_plugin(tool, input_path, input_type=input_type)
+            # Choose executor: native (direct host subprocess) or Docker container
+            if plugin_conf.get("executor") == "native":
+                output_dir = NativeExecutor.run_plugin(tool, input_path, input_type=input_type)
+            else:
+                output_dir = DockerExecutor.run_plugin(tool, input_path, input_type=input_type)
 
             # normalize
             findings = normalize(tool, output_dir)  # returns list of Finding dataclasses
