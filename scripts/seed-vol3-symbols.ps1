@@ -1,14 +1,14 @@
 # =============================================================================
-# ForensicStack — Seed Volatility3 Windows symbol tables (run ONCE)
+# ForensicStack - Seed Volatility3 Windows symbol tables (run ONCE)
 #
 # Downloads the 4 NT kernel PDB directories from the community symbols repo
-# directly on the Windows HOST (no Docker network dependency), then copies
-# them into the named Docker volume forensicstack_vol3_symbols.
+# on the Windows HOST (no Docker network dependency), then copies them into
+# the named Docker volume forensicstack_vol3_symbols.
 #
-# Usage (from repo root or scripts/ folder):
+# Usage (from repo root or scripts\ folder):
 #   .\scripts\seed-vol3-symbols.ps1
 #
-# Requirements: git, docker (Docker Desktop running)
+# Requirements: git, Docker Desktop running
 # =============================================================================
 $ErrorActionPreference = "Stop"
 
@@ -16,10 +16,9 @@ $Repo   = "https://github.com/Abyss-W4tcher/volatility3-symbols.git"
 $Volume = "forensicstack_vol3_symbols"
 
 Write-Host "[ForensicStack] Downloading Volatility3 NT kernel symbols onto the host..."
-Write-Host "               (ntkrnlmp, ntkrpamp, ntoskrnl, ntkrnlpa — covers Win7-11 32/64-bit)"
+Write-Host "               (ntkrnlmp, ntkrpamp, ntoskrnl, ntkrnlpa - Win7/8/10/11 32+64-bit)"
 
-# Create a temp directory and clone the community symbols repo (sparse)
-$TmpDir = Join-Path $env:TEMP "vol3-symbols-$(New-Guid)"
+$TmpDir = Join-Path $env:TEMP ("vol3-symbols-" + [System.Guid]::NewGuid().ToString())
 New-Item -ItemType Directory -Path $TmpDir | Out-Null
 
 try {
@@ -37,7 +36,7 @@ try {
 
     Pop-Location
 
-    # Convert Windows path to Docker-compatible forward-slash path
+    # Convert backslashes to forward slashes for Docker volume mount
     $SrcPath = (Join-Path $TmpDir "windows").Replace("\", "/")
 
     Write-Host "[ForensicStack] Copying symbols into Docker volume '$Volume'..."
@@ -48,12 +47,11 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "docker run (copy) failed" }
 
     Write-Host ""
-    Write-Host "[ForensicStack] Done! Symbols are stored in volume '$Volume'."
-    Write-Host "                Volatility3 containers will find them at:"
-    Write-Host "                /root/.cache/volatility3/symbols/windows/"
+    Write-Host "[ForensicStack] Done! Symbols stored in volume '$Volume'."
+    Write-Host "                Volatility3 containers find them at /root/.cache/volatility3/symbols/windows/"
 
 } catch {
-    Write-Host "[ForensicStack] ERROR: $_" -ForegroundColor Red
+    Write-Host "[ForensicStack] ERROR: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 } finally {
     Pop-Location -ErrorAction SilentlyContinue
