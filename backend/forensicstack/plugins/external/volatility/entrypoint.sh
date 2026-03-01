@@ -35,7 +35,8 @@ outfile="${OUTPUT_DIR}/${JOB_ID}_${safe_name}.json"
 logfile="${OUTPUT_DIR}/${JOB_ID}_${safe_name}.log"
 
 echo "[volatility] Running: $PLUGIN"
-python "$VOL" -f "$INPUT_FILE" --renderer json "$PLUGIN" \
+# -vvv shows PDB GUID lookup + download attempts — critical for symbol debugging
+python "$VOL" -vvv -f "$INPUT_FILE" --renderer json "$PLUGIN" \
     > "$outfile" 2>"$logfile" || true
 
 # Print captured errors so docker logs / worker can see them
