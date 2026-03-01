@@ -1,8 +1,10 @@
 # =============================================================================
 # ForensicStack — Install EZ Tools on the Windows host (run ONCE)
 #
-# Downloads Eric Zimmerman's forensic tools from Backblaze and extracts
-# them to C:\EZTools (or the path set in EZTOOLS_DIR env var).
+# Uses Eric Zimmerman's official Get-ZimmermanTools.ps1 script to download
+# and install all tools to C:\EZTools (or the path set in EZTOOLS_DIR).
+#
+# Source: https://github.com/EricZimmerman/Get-ZimmermanTools
 #
 # Usage:
 #   .\scripts\install-eztools.ps1
@@ -15,27 +17,27 @@
 # =============================================================================
 $ErrorActionPreference = "Stop"
 
-$InstallDir = if ($env:EZTOOLS_DIR) { $env:EZTOOLS_DIR } else { "C:\EZTools" }
-$Url        = "https://f001.backblazeb2.com/file/EricZimmermanTools/net6/All_6.zip"
-$ZipPath    = Join-Path $InstallDir "All_6.zip"
+$InstallDir    = if ($env:EZTOOLS_DIR) { $env:EZTOOLS_DIR } else { "C:\EZTools" }
+$GetToolsUrl   = "https://raw.githubusercontent.com/EricZimmerman/Get-ZimmermanTools/master/Get-ZimmermanTools.ps1"
+$GetToolsLocal = Join-Path $env:TEMP "Get-ZimmermanTools.ps1"
 
 Write-Host "[ForensicStack] Installing EZ Tools to '$InstallDir'..." -ForegroundColor Cyan
-
-# Create directory if needed
 New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
 
-# Download
-Write-Host "[ForensicStack] Downloading EZ Tools (~200 MB)..."
-Invoke-WebRequest -Uri $Url -OutFile $ZipPath -UseBasicParsing
-Write-Host "[ForensicStack] Download complete."
+# Download Eric Zimmerman's official installer script
+Write-Host "[ForensicStack] Fetching Get-ZimmermanTools.ps1 from GitHub..."
+Invoke-WebRequest -Uri $GetToolsUrl -OutFile $GetToolsLocal -UseBasicParsing
 
-# Extract
-Write-Host "[ForensicStack] Extracting..."
-Expand-Archive -Path $ZipPath -DestinationPath $InstallDir -Force
-Remove-Item $ZipPath
+# Run the official script: net6 tools (compatible with all modern Windows)
+Write-Host "[ForensicStack] Downloading EZ Tools (net6, this may take a few minutes)..."
+& powershell -ExecutionPolicy Bypass -File $GetToolsLocal `
+    -Dest $InstallDir `
+    -NetVersion 6
 
-# Quick sanity check
-$ExeCount = (Get-ChildItem -Path $InstallDir -Filter "*.exe" -Recurse).Count
+Remove-Item $GetToolsLocal -ErrorAction SilentlyContinue
+
+# Sanity check
+$ExeCount = (Get-ChildItem -Path $InstallDir -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue).Count
 Write-Host ""
 Write-Host "[ForensicStack] Done. $ExeCount executables installed in '$InstallDir'." -ForegroundColor Green
 Write-Host ""
