@@ -53,7 +53,10 @@ class DockerExecutor:
             cmd.append("--read-only")
         for t in extra_tmp:
             cmd += ["--tmpfs", t]
-        cmd += envs + [
+        # Named volumes declared in plugin config (persist between runs, e.g. symbol caches)
+        for vol in plugin.get("plugin_volumes", []):
+            cmd += ["-v", vol]
+        cmd += [
             "-v", f"{job_in.resolve()}:/data:ro",
             "-v", f"{job_out.resolve()}:/output",
             image
