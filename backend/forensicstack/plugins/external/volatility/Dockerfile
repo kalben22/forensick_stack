@@ -19,23 +19,29 @@ RUN pip install --no-cache-dir -e . && \
     pip install --no-cache-dir pefile yara-python
 
 # ---------------------------------------------------------------------------
-# Pre-bake community Windows ISF symbol tables so the image is self-contained.
+# Pre-bake NT kernel ISF symbol tables (Windows 7/8/10/11, 32-bit and 64-bit).
 #
-# Abyss-W4tcher/volatility3-symbols mirrors the official ISF server with
-# thousands of Windows builds (Win7 32/64-bit, Win8/10/11, Server 2008-2022).
-# Symbols are copied into Volatility3's built-in symbols directory so they
-# are found immediately with no network access at analysis time.
+# ALL ForensicStack plugins (pslist, cmdline, netscan, dlllist, malfind) only
+# need the NT kernel PDB to build the kernel symbol table. We fetch ONLY the
+# 4 relevant PDB directories from the community repo — not the entire windows/
+# subtree — so the build stays fast (minutes instead of hours):
+#
+#   ntkrnlmp.pdb  → Win7-11 64-bit  (and 32-bit non-PAE, multiprocessor)
+#   ntkrpamp.pdb  → Win7/8 32-bit PAE  (most common 32-bit kernel)
+#   ntoskrnl.pdb  → Win7/8 32-bit non-PAE / uniprocessor
+#   ntkrnlpa.pdb  → Win7 32-bit PAE uniprocessor
 #
 # Directory structure expected by Volatility 3:
 #   volatility3/symbols/windows/<PDB_name>/<GUID>/<PDB_name>.<GUID>.<age>.json.xz
-#
-# The sparse checkout fetches only the windows/ subtree, which keeps the
-# image size reasonable (no Linux/macOS symbols included).
 # ---------------------------------------------------------------------------
 RUN git clone --depth 1 --sparse \
         https://github.com/Abyss-W4tcher/volatility3-symbols.git /tmp/vol3-symbols \
     && cd /tmp/vol3-symbols \
-    && git sparse-checkout set windows \
+    && git sparse-checkout set \
+        windows/ntkrnlmp.pdb \
+        windows/ntkrpamp.pdb \
+        windows/ntoskrnl.pdb \
+        windows/ntkrnlpa.pdb \
     && cp -r windows/. /app/volatility3/volatility3/symbols/windows/ \
     && rm -rf /tmp/vol3-symbols
 
