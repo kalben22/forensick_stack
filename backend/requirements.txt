@@ -6,7 +6,8 @@ typer[all]
 rich
 sqlalchemy
 alembic
-psycopg[binary]
+psycopg2-binary          # sync SQLAlchemy driver (postgresql:// URL defaults to psycopg2)
+psycopg[binary]          # psycopg3 (kept for async use if needed)
 asyncpg
 redis
 celery
