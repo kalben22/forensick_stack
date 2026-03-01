@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# System deps: git to clone vol3 + community symbols, build tools for Python extensions
+# System deps: git to clone vol3, plus build tools for some extensions
 RUN apt-get update && apt-get install -y \
     git \
     build-essential \
@@ -19,31 +19,16 @@ RUN pip install --no-cache-dir -e . && \
     pip install --no-cache-dir pefile yara-python
 
 # ---------------------------------------------------------------------------
-# Pre-bake NT kernel ISF symbol tables (Windows 7/8/10/11, 32-bit and 64-bit).
+# Symbol tables are NOT baked into this image (network is unreliable at
+# build time in many Docker Desktop / CI environments).
 #
-# ALL ForensicStack plugins (pslist, cmdline, netscan, dlllist, malfind) only
-# need the NT kernel PDB to build the kernel symbol table. We fetch ONLY the
-# 4 relevant PDB directories from the community repo — not the entire windows/
-# subtree — so the build stays fast (minutes instead of hours):
-#
-#   ntkrnlmp.pdb  → Win7-11 64-bit  (and 32-bit non-PAE, multiprocessor)
-#   ntkrpamp.pdb  → Win7/8 32-bit PAE  (most common 32-bit kernel)
-#   ntoskrnl.pdb  → Win7/8 32-bit non-PAE / uniprocessor
-#   ntkrnlpa.pdb  → Win7 32-bit PAE uniprocessor
-#
-# Directory structure expected by Volatility 3:
-#   volatility3/symbols/windows/<PDB_name>/<GUID>/<PDB_name>.<GUID>.<age>.json.xz
+# Run  scripts/seed-vol3-symbols.ps1  (Windows)
+#  or  scripts/seed-vol3-symbols.sh   (Linux / Mac)
+# ONCE after building this image.  The script downloads the NT kernel ISF
+# files on the HOST and copies them into the named Docker volume
+# forensicstack_vol3_symbols, which is mounted at /root/.cache/volatility3
+# inside every analysis container.  Symbols persist between runs.
 # ---------------------------------------------------------------------------
-RUN git clone --depth 1 --sparse \
-        https://github.com/Abyss-W4tcher/volatility3-symbols.git /tmp/vol3-symbols \
-    && cd /tmp/vol3-symbols \
-    && git sparse-checkout set \
-        windows/ntkrnlmp.pdb \
-        windows/ntkrpamp.pdb \
-        windows/ntoskrnl.pdb \
-        windows/ntkrnlpa.pdb \
-    && cp -r windows/. /app/volatility3/volatility3/symbols/windows/ \
-    && rm -rf /tmp/vol3-symbols
 
 # Create output directory
 RUN mkdir -p /output && chmod 0777 /output
