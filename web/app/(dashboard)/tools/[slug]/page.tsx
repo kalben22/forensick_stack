@@ -2,20 +2,22 @@ import type { Metadata } from 'next'
 import { ToolDetailPage } from '@/components/tools/tool-detail-page'
 
 interface Props {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
-export function generateMetadata({ params }: Props): Metadata {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params
   const label =
-    params.slug === 'volatility' ? 'Volatility 3' :
-    params.slug === 'exiftool'   ? 'ExifTool' :
-    params.slug === 'ileapp'     ? 'iLEAPP' :
-    params.slug === 'aleapp'     ? 'aLEAPP' :
-    params.slug
+    slug === 'volatility' ? 'Volatility 3' :
+    slug === 'exiftool'   ? 'ExifTool' :
+    slug === 'ileapp'     ? 'iLEAPP' :
+    slug === 'aleapp'     ? 'aLEAPP' :
+    slug
 
   return { title: `${label} — ForensicStack` }
 }
 
-export default function Page({ params }: Props) {
-  return <ToolDetailPage slug={params.slug} />
+export default async function Page({ params }: Props) {
+  const { slug } = await params
+  return <ToolDetailPage slug={slug} />
 }
