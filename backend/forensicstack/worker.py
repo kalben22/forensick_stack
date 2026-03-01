@@ -3,7 +3,10 @@ import os
 import json
 import time
 import redis
+from dotenv import load_dotenv
 from minio import Minio
+
+load_dotenv()
 from forensicstack.core.plugin_registry import PLUGIN_REGISTRY
 from forensicstack.core.executor.docker_executor import DockerExecutor
 from forensicstack.core.normalization_engine import normalize
