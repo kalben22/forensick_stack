@@ -56,7 +56,7 @@ class DockerExecutor:
         # Named volumes declared in plugin config (persist between runs, e.g. symbol caches)
         for vol in plugin.get("plugin_volumes", []):
             cmd += ["-v", vol]
-        cmd += [
+        cmd += envs + [
             "-v", f"{job_in.resolve()}:/data:ro",
             "-v", f"{job_out.resolve()}:/output",
             image
