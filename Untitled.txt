@@ -1,0 +1,164 @@
+
+
+## Error Type
+Build Error
+
+## Error Message
+Error evaluating Node.js code
+
+## Build Output
+./app/globals.css
+Error evaluating Node.js code
+Error: Cannot find module 'C:\Users\Bocal\Documents\forensick_stack-main\web\node_modules\tailwindcss\dist\lib.js'
+    [at createEsmNotFoundErr (node:internal/modules/cjs/loader:1493:15)]
+    [at finalizeEsmResolution (node:internal/modules/cjs/loader:1482:9)]
+    [at resolveExports (node:internal/modules/cjs/loader:685:14)]
+    [at Module._findPath (node:internal/modules/cjs/loader:752:31)]
+    [at Module._resolveFilename (node:internal/modules/cjs/loader:1441:27)]
+    [at defaultResolveImpl (node:internal/modules/cjs/loader:1066:19)]
+    [at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1071:22)]
+    [at Module._load (node:internal/modules/cjs/loader:1242:25)]
+    [at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)]
+    [at Module.require (node:internal/modules/cjs/loader:1556:12)]
+
+Import trace:
+  Client Component Browser:
+    ./app/globals.css [Client Component Browser]
+    ./app/layout.tsx [Server Component]
+
+Next.js version: 16.1.6 (Turbopack)
+
+
+
+
+(venv) PS C:\Users\Bocal\Documents\forensick_stack-main\web> npm i
+npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+npm warn deprecated @humanwhocodes/config-array@0.13.0: Use @eslint/config-array instead
+npm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
+npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+npm warn deprecated @humanwhocodes/object-schema@2.0.3: Use @eslint/object-schema instead
+npm warn deprecated glob@10.3.10: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+npm warn deprecated eslint@8.57.1: This version is no longer supported. Please see https://eslint.org/version-support for other options.
+
+added 391 packages, and audited 512 packages in 15s
+
+154 packages are looking for funding
+  run `npm fund` for details
+
+4 high severity vulnerabilities
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+(venv) PS C:\Users\Bocal\Documents\forensick_stack-main\web> npm audit fix --force
+npm warn using --force Recommended protections disabled.
+npm warn audit Updating next to 16.1.6, which is a SemVer major change.
+npm warn audit Updating eslint-config-next to 16.1.6, which is a SemVer major change.
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: eslint-config-next@16.1.6
+npm warn Found: eslint@8.57.1
+npm warn node_modules/eslint
+npm warn   peer eslint@"^6.0.0 || ^7.0.0 || >=8.0.0" from @eslint-community/eslint-utils@4.9.1
+npm warn   node_modules/@eslint-community/eslint-utils
+npm warn     @eslint-community/eslint-utils@"^4.2.0" from eslint@8.57.1
+npm warn   5 more (eslint-import-resolver-typescript, ...)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer eslint@">=9.0.0" from eslint-config-next@16.1.6
+npm warn node_modules/eslint-config-next
+npm warn   dev eslint-config-next@"16.1.6" from the root project
+npm warn
+npm warn Conflicting peer dependency: eslint@10.0.2
+npm warn node_modules/eslint
+npm warn   peer eslint@">=9.0.0" from eslint-config-next@16.1.6
+npm warn   node_modules/eslint-config-next
+npm warn     dev eslint-config-next@"16.1.6" from the root project
+
+added 47 packages, removed 31 packages, changed 9 packages, and audited 528 packages in 5m
+
+151 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+(venv) PS C:\Users\Bocal\Documents\forensick_stack-main\web> npm run build
+
+> forensicstack-web@0.1.0 build
+> next build
+
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+
+> Build error occurred
+Error: Turbopack build failed with 1 errors:
+./app/globals.css
+Error evaluating Node.js code
+Error: Cannot find module 'C:\Users\Bocal\Documents\forensick_stack-main\web\node_modules\tailwindcss\dist\lib.js'
+    [at createEsmNotFoundErr (node:internal/modules/cjs/loader:1493:15)]
+    [at finalizeEsmResolution (node:internal/modules/cjs/loader:1482:9)]
+    [at resolveExports (node:internal/modules/cjs/loader:685:14)]
+    [at Module._findPath (node:internal/modules/cjs/loader:752:31)]
+    [at Module._resolveFilename (node:internal/modules/cjs/loader:1441:27)]
+    [at defaultResolveImpl (node:internal/modules/cjs/loader:1066:19)]
+    [at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1071:22)]
+    [at Module._load (node:internal/modules/cjs/loader:1242:25)]
+    [at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)]
+    [at Module.require (node:internal/modules/cjs/loader:1556:12)]
+
+Import trace:
+  Client Component Browser:
+    ./app/globals.css [Client Component Browser]
+    ./app/layout.tsx [Server Component]
+
+
+    at ignore-listed frames
+(venv) PS C:\Users\Bocal\Documents\forensick_stack-main\web> npm run dev
+
+> forensicstack-web@0.1.0 dev
+> next dev
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.16.1:3000
+- Environments: .env.local
+
+✓ Starting...
+
+  We detected TypeScript in your project and reconfigured your tsconfig.json file for you.
+  The following suggested values were added to your tsconfig.json. These values can be changed to fit your project's needs:
+
+        - include was updated to add '.next/dev/types/**/*.ts'
+
+  The following mandatory changes were made to your tsconfig.json:
+
+        - jsx was set to react-jsx (next.js uses the React automatic runtime)
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+✓ Ready in 781ms
+○ Compiling /login ...
+⨯ ./app/globals.css
+Error evaluating Node.js code
+Error: Cannot find module 'C:\Users\Bocal\Documents\forensick_stack-main\web\node_modules\tailwindcss\dist\lib.js'
+    [at createEsmNotFoundErr (node:internal/modules/cjs/loader:1493:15)]
+    [at finalizeEsmResolution (node:internal/modules/cjs/loader:1482:9)]
+    [at resolveExports (node:internal/modules/cjs/loader:685:14)]
+    [at Module._findPath (node:internal/modules/cjs/loader:752:31)]
+    [at Module._resolveFilename (node:internal/modules/cjs/loader:1441:27)]
+    [at defaultResolveImpl (node:internal/modules/cjs/loader:1066:19)]
+    [at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1071:22)]
+    [at Module._load (node:internal/modules/cjs/loader:1242:25)]
+    [at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)]
+    [at Module.require (node:internal/modules/cjs/loader:1556:12)]
+
+Import trace:
+  Client Component Browser:
+    ./app/globals.css [Client Component Browser]
+    ./app/layout.tsx [Server Component]
+
+
+ GET /login 500 in 5.7s (compile: 5.5s, proxy.ts: 6ms, render: 183ms)
+⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
