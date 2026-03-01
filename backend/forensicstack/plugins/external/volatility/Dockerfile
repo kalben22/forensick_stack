@@ -22,6 +22,7 @@ RUN pip install --no-cache-dir -e . && \
 RUN mkdir -p /output && chmod 0777 /output
 
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# Strip Windows CRLF line endings in case the file was checked out on Windows
+RUN sed -i 's/\r//' /entrypoint.sh && chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
