@@ -42,10 +42,14 @@ PLUGIN_REGISTRY = {
         "memory": "6g",
         "cpus": "2",
         "timeout": 7200,
-        # Symbols are baked into the image at build time — no volume needed.
-        # network: none (no external access required at runtime).
-        "network": "none",
+        # Symbols for common kernels are baked into the image (package dir).
+        # network: bridge — Volatility auto-downloads missing PDB ISF files
+        # from msdl.microsoft.com when the baked-in set doesn't match.
+        # plugin_volumes: cache dir persists dynamically downloaded ISF files
+        # so uncommon kernel versions are only downloaded once.
+        "network": "bridge",
         "readonly": False,
+        "plugin_volumes": ["forensicstack_vol3_symbols:/root/.cache/volatility3"],
         "features": [
             {
                 "id": "windows.pslist",
