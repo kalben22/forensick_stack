@@ -10,73 +10,40 @@
 #   JOB_ID            — used to prefix output filenames (set by DockerExecutor)
 #   VOLATILITY_PLUGIN — specific plugin to run (default: windows.pslist)
 #
-# First-run behaviour:
-#   If NT kernel ISF symbols are missing from the volume cache, they are
-#   downloaded automatically via git partial clone (--filter=blob:none +
-#   --sparse).  The named Docker volume forensicstack_vol3_symbols persists
-#   them for all subsequent runs.
-#
-# Why git clone (not git init + fetch):
-#   git clone --filter=blob:none sets up the "partialclonefilter" in
-#   .git/config, enabling lazy blob fetching when git sparse-checkout set
-#   checks out the requested paths.  git init + git fetch does NOT configure
-#   this, so git checkout silently fails to retrieve blobs.
+# Symbol tables:
+#   Downloaded automatically on first run from the official Volatility
+#   Foundation CDN (windows.zip, ~300-400 MB).  The named Docker volume
+#   forensicstack_vol3_symbols persists them for all subsequent runs.
 # =============================================================================
 set -euo pipefail
 
 INPUT_DIR="/data"
 OUTPUT_DIR="/output"
 JOB_ID="${JOB_ID:-default}"
-VOL="/app/volatility3/vol.py"
-SYMBOLS_DIR="/root/.cache/volatility3/symbols/windows"
+SYMBOLS_BASE="/root/.cache/volatility3/symbols"
+SYMBOLS_DIR="${SYMBOLS_BASE}/windows"
 
 # ---------------------------------------------------------------------------
 # Auto-seed symbols on first run
 # ---------------------------------------------------------------------------
 if [ ! -d "${SYMBOLS_DIR}/ntkrnlmp.pdb" ] && [ ! -d "${SYMBOLS_DIR}/ntkrpamp.pdb" ]; then
     echo "[volatility] First run: no symbol tables found."
-    echo "[volatility] Downloading NT kernel ISF symbols — this is a one-time step."
-    echo "[volatility] Symbols will be persisted in the Docker volume for future runs."
+    echo "[volatility] Downloading Windows ISF symbols from Volatility Foundation..."
+    echo "[volatility] This is a one-time step (~300-400 MB). Symbols will be"
+    echo "[volatility] persisted in the Docker volume for all future runs."
 
-    TMP=$(mktemp -d)
-    trap 'rm -rf "$TMP"' EXIT
+    mkdir -p "${SYMBOLS_BASE}"
 
-    # Phase 1: partial clone — all commit metadata, NO blobs.
-    # IMPORTANT: do NOT use --depth=1 together with --filter=blob:none.
-    # A shallow clone restricts the promisor-remote setup, so git
-    # sparse-checkout cannot do lazy blob fetches and silently produces
-    # an empty working tree.  Without --depth the promisor remote is
-    # properly configured and phase 2 fetches only the requested blobs.
-    echo "[volatility] Phase 1/2 — cloning metadata (no blobs)..."
-    git clone \
-        --filter=blob:none \
-        --sparse \
-        https://github.com/Abyss-W4tcher/volatility3-symbols.git \
-        "$TMP"
+    wget -q --show-progress \
+        "https://downloads.volatilityfoundation.org/volatility3/symbols/windows.zip" \
+        -O /tmp/windows.zip
 
-    cd "$TMP"
+    echo "[volatility] Extracting symbols..."
+    unzip -q /tmp/windows.zip -d "${SYMBOLS_BASE}"
+    rm -f /tmp/windows.zip
 
-    # Phase 2: set sparse checkout patterns — git now lazily fetches
-    # only the blobs for the 4 requested PDB directories (~200-400 MB).
-    echo "[volatility] Phase 2/2 — downloading NT kernel PDB directories..."
-    git sparse-checkout set \
-        windows/ntkrnlmp.pdb \
-        windows/ntkrpamp.pdb \
-        windows/ntoskrnl.pdb \
-        windows/ntkrnlpa.pdb
-
-    echo "[volatility] Files downloaded: $(find windows -name '*.json.xz' 2>/dev/null | wc -l)"
-
-    if [ -d windows ]; then
-        mkdir -p "${SYMBOLS_DIR}"
-        cp -r windows/. "${SYMBOLS_DIR}/"
-        echo "[volatility] Symbols cached at ${SYMBOLS_DIR}"
-    else
-        echo "[volatility] WARNING: symbol download did not produce windows/ directory."
-        echo "[volatility]   Fallback: run the host seed script to populate the volume:"
-        echo "[volatility]     Windows: .\\scripts\\seed-vol3-symbols.ps1"
-        echo "[volatility]     Linux:   ./scripts/seed-vol3-symbols.sh"
-    fi
+    COUNT=$(find "${SYMBOLS_DIR}" -name '*.json.xz' 2>/dev/null | wc -l)
+    echo "[volatility] Symbols ready: ${COUNT} ISF files installed at ${SYMBOLS_DIR}"
 fi
 
 # ---------------------------------------------------------------------------
@@ -101,7 +68,7 @@ outfile="${OUTPUT_DIR}/${JOB_ID}_${safe_name}.json"
 logfile="${OUTPUT_DIR}/${JOB_ID}_${safe_name}.log"
 
 echo "[volatility] Running: $PLUGIN"
-python "$VOL" -f "$INPUT_FILE" --renderer json "$PLUGIN" \
+vol -f "$INPUT_FILE" --renderer json "$PLUGIN" \
     > "$outfile" 2>"$logfile" || true
 
 # Always surface stderr so docker logs / the worker can see what went wrong
