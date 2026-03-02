@@ -79,6 +79,23 @@ _EZTOOLS_MAP = {
         "exe": "hasher.exe",
         "args": lambda inp, out: ["-f", inp, "--csv", out, "--csvf", "hasher.csv"],
     },
+    "recentfilecache": {
+        "exe": "RecentFileCacheParser.exe",
+        "args": lambda inp, out: ["-f", inp, "--csv", out, "--csvf", "recentfilecache.csv"],
+    },
+    "rla": {
+        "exe": "RLA.exe",
+        # RLA cleans dirty hives in-place; output dir receives a log of replayed transactions
+        "args": lambda inp, out: ["-f", inp, "--csv", out, "--csvf", "rla.csv"],
+    },
+    "sumemd": {
+        "exe": "SumECmd.exe",
+        "args": lambda inp, out: ["-f", inp, "--csv", out, "--csvf", "sum.csv"],
+    },
+    "wxtcmd": {
+        "exe": "WxTCmd.exe",
+        "args": lambda inp, out: ["-f", inp, "--csv", out, "--csvf", "timeline.csv"],
+    },
 }
 
 # Per-tool registries keyed by plugin name

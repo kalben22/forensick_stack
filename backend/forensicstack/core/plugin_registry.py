@@ -194,6 +194,30 @@ PLUGIN_REGISTRY = {
                 "description": "Calcule MD5, SHA1 et SHA256 d'un fichier pour l'identification et la comparaison avec des bases de hashes connus (VirusTotal, NSRL).",
                 "accepted_extensions": ["*"],
             },
+            {
+                "id": "recentfilecache",
+                "label": "RecentFileCache",
+                "description": "Parse RecentFileCache.bcf (Windows 7/8) — liste les exécutables récemment lancés, similaire au Shimcache mais pour systèmes 32-bit.",
+                "accepted_extensions": [".bcf"],
+            },
+            {
+                "id": "rla",
+                "label": "RLA (Transaction Log Replay)",
+                "description": "Rejoue les journaux de transactions (.LOG1/.LOG2) pour nettoyer une ruche registre 'dirty' avant analyse RECmd — indispensable sur images live.",
+                "accepted_extensions": [".LOG1", ".LOG2", ".dat", "NTUSER.DAT", "SAM", "SYSTEM", "SOFTWARE"],
+            },
+            {
+                "id": "sumemd",
+                "label": "SumECmd (User Access Logs)",
+                "description": "Parse la base SUM (LogFiles\\SUM) — connexions entrantes RDP/SMB/WinRM avec utilisateurs, adresses IP source et timestamps. Clé pour le mouvement latéral.",
+                "accepted_extensions": [".mdb", "SystemIdentity.mdb", "Current.mdb"],
+            },
+            {
+                "id": "wxtcmd",
+                "label": "WxTCmd (Windows 10 Timeline)",
+                "description": "Parse ActivitiesCache.db — applications utilisées, fichiers ouverts, activité web avec durée de focus. Reconstruit la chronologie d'activité de l'utilisateur.",
+                "accepted_extensions": [".db", "ActivitiesCache.db"],
+            },
         ],
     },
 }
