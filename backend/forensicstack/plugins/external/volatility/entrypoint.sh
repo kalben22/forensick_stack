@@ -41,13 +41,14 @@ if [ ! -d "${SYMBOLS_DIR}/ntkrnlmp.pdb" ] && [ ! -d "${SYMBOLS_DIR}/ntkrpamp.pdb
     TMP=$(mktemp -d)
     trap 'rm -rf "$TMP"' EXIT
 
-    # Phase 1: shallow partial clone — metadata only (~900 KB), no blobs yet.
-    # --sparse starts the repo in cone mode (only root-level entries).
-    # --filter=blob:none + git clone (not git init) sets partialclonefilter
-    # so that phase 2 can do lazy blob fetches.
-    echo "[volatility] Phase 1/2 — cloning metadata (~900 KB)..."
+    # Phase 1: partial clone — all commit metadata, NO blobs.
+    # IMPORTANT: do NOT use --depth=1 together with --filter=blob:none.
+    # A shallow clone restricts the promisor-remote setup, so git
+    # sparse-checkout cannot do lazy blob fetches and silently produces
+    # an empty working tree.  Without --depth the promisor remote is
+    # properly configured and phase 2 fetches only the requested blobs.
+    echo "[volatility] Phase 1/2 — cloning metadata (no blobs)..."
     git clone \
-        --depth=1 \
         --filter=blob:none \
         --sparse \
         https://github.com/Abyss-W4tcher/volatility3-symbols.git \
@@ -55,16 +56,16 @@ if [ ! -d "${SYMBOLS_DIR}/ntkrnlmp.pdb" ] && [ ! -d "${SYMBOLS_DIR}/ntkrpamp.pdb
 
     cd "$TMP"
 
-    # Phase 2: set sparse checkout patterns and check out.
-    # git sparse-checkout set triggers a working-tree update; because the
-    # partial clone filter is active, git fetches only the blobs for the
-    # 4 requested PDB directories (~200-400 MB total).
-    echo "[volatility] Phase 2/2 — downloading 4 NT kernel PDB directories..."
+    # Phase 2: set sparse checkout patterns — git now lazily fetches
+    # only the blobs for the 4 requested PDB directories (~200-400 MB).
+    echo "[volatility] Phase 2/2 — downloading NT kernel PDB directories..."
     git sparse-checkout set \
         windows/ntkrnlmp.pdb \
         windows/ntkrpamp.pdb \
         windows/ntoskrnl.pdb \
         windows/ntkrnlpa.pdb
+
+    echo "[volatility] Files downloaded: $(find windows -name '*.json.xz' 2>/dev/null | wc -l)"
 
     if [ -d windows ]; then
         mkdir -p "${SYMBOLS_DIR}"
