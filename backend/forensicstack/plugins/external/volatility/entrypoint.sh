@@ -11,10 +11,16 @@
 #   VOLATILITY_PLUGIN — specific plugin to run (default: windows.pslist)
 #
 # First-run behaviour:
-#   If the NT kernel ISF symbol tables are absent from the volume cache
-#   (/root/.cache/volatility3/symbols/windows), they are downloaded
-#   automatically before analysis.  The named Docker volume
-#   forensicstack_vol3_symbols persists them for all subsequent runs.
+#   If NT kernel ISF symbols are missing from the volume cache, they are
+#   downloaded automatically via git partial clone (--filter=blob:none +
+#   --sparse).  The named Docker volume forensicstack_vol3_symbols persists
+#   them for all subsequent runs.
+#
+# Why git clone (not git init + fetch):
+#   git clone --filter=blob:none sets up the "partialclonefilter" in
+#   .git/config, enabling lazy blob fetching when git sparse-checkout set
+#   checks out the requested paths.  git init + git fetch does NOT configure
+#   this, so git checkout silently fails to retrieve blobs.
 # =============================================================================
 set -euo pipefail
 
@@ -26,42 +32,50 @@ SYMBOLS_DIR="/root/.cache/volatility3/symbols/windows"
 
 # ---------------------------------------------------------------------------
 # Auto-seed symbols on first run
-# The container has --network bridge so it can reach GitHub.
-# Two-phase download:
-#   1. git fetch --filter=blob:none  =>  metadata only  (~900 KB)
-#   2. git read-tree + git checkout -- <paths>  =>  blobs for 4 PDB dirs only
 # ---------------------------------------------------------------------------
 if [ ! -d "${SYMBOLS_DIR}/ntkrnlmp.pdb" ] && [ ! -d "${SYMBOLS_DIR}/ntkrpamp.pdb" ]; then
     echo "[volatility] First run: no symbol tables found."
-    echo "[volatility] Downloading NT kernel ISF symbols (~200-400 MB) — this is a one-time step."
-    echo "[volatility] Symbols will be cached in the volume for all future runs."
+    echo "[volatility] Downloading NT kernel ISF symbols — this is a one-time step."
+    echo "[volatility] Symbols will be persisted in the Docker volume for future runs."
 
     TMP=$(mktemp -d)
+    trap 'rm -rf "$TMP"' EXIT
+
+    # Phase 1: shallow partial clone — metadata only (~900 KB), no blobs yet.
+    # --sparse starts the repo in cone mode (only root-level entries).
+    # --filter=blob:none + git clone (not git init) sets partialclonefilter
+    # so that phase 2 can do lazy blob fetches.
+    echo "[volatility] Phase 1/2 — cloning metadata (~900 KB)..."
+    git clone \
+        --depth=1 \
+        --filter=blob:none \
+        --sparse \
+        https://github.com/Abyss-W4tcher/volatility3-symbols.git \
+        "$TMP"
+
     cd "$TMP"
 
-    git init .
-    git remote add origin https://github.com/Abyss-W4tcher/volatility3-symbols.git
-
-    echo "[volatility] Phase 1/2 — fetching metadata..."
-    git fetch --depth 1 --filter=blob:none origin master
-
-    echo "[volatility] Phase 2/2 — downloading symbol blobs..."
-    git read-tree FETCH_HEAD
-    git checkout -- \
+    # Phase 2: set sparse checkout patterns and check out.
+    # git sparse-checkout set triggers a working-tree update; because the
+    # partial clone filter is active, git fetches only the blobs for the
+    # 4 requested PDB directories (~200-400 MB total).
+    echo "[volatility] Phase 2/2 — downloading 4 NT kernel PDB directories..."
+    git sparse-checkout set \
         windows/ntkrnlmp.pdb \
         windows/ntkrpamp.pdb \
         windows/ntoskrnl.pdb \
-        windows/ntkrnlpa.pdb 2>&1 || true
+        windows/ntkrnlpa.pdb
 
     if [ -d windows ]; then
         mkdir -p "${SYMBOLS_DIR}"
         cp -r windows/. "${SYMBOLS_DIR}/"
         echo "[volatility] Symbols cached at ${SYMBOLS_DIR}"
     else
-        echo "[volatility] WARNING: symbol download did not produce windows/ — analysis may fail."
+        echo "[volatility] WARNING: symbol download did not produce windows/ directory."
+        echo "[volatility]   Fallback: run the host seed script to populate the volume:"
+        echo "[volatility]     Windows: .\\scripts\\seed-vol3-symbols.ps1"
+        echo "[volatility]     Linux:   ./scripts/seed-vol3-symbols.sh"
     fi
-
-    cd / && rm -rf "$TMP"
 fi
 
 # ---------------------------------------------------------------------------
@@ -74,10 +88,12 @@ if [[ -z "$INPUT_FILE" ]]; then
     exit 1
 fi
 
-echo "[volatility] Input: $INPUT_FILE"
-echo "[volatility] Job: $JOB_ID"
+echo "[volatility] Input : $INPUT_FILE"
+echo "[volatility] Job   : $JOB_ID"
 
-# Read plugin from env var — default to windows.pslist if not set
+# ---------------------------------------------------------------------------
+# Run the requested plugin
+# ---------------------------------------------------------------------------
 PLUGIN="${VOLATILITY_PLUGIN:-windows.pslist}"
 safe_name="${PLUGIN//./_}"
 outfile="${OUTPUT_DIR}/${JOB_ID}_${safe_name}.json"
@@ -87,10 +103,11 @@ echo "[volatility] Running: $PLUGIN"
 python "$VOL" -f "$INPUT_FILE" --renderer json "$PLUGIN" \
     > "$outfile" 2>"$logfile" || true
 
-# Print captured errors so docker logs / worker can see them
+# Always surface stderr so docker logs / the worker can see what went wrong
 if [[ -s "$logfile" ]]; then
-    echo "[volatility] Stderr output:"
+    echo "[volatility] --- stderr ---"
     cat "$logfile"
+    echo "[volatility] --- end stderr ---"
 fi
 
 echo "[volatility] Done — result in $outfile"
