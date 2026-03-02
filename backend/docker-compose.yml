@@ -93,7 +93,7 @@ services:
       CHROMA_PORT: 8000
       SECRET_KEY: ${SECRET_KEY}
     ports:
-      - "8080:8000"
+      - "8001:8000"
     volumes:
       - .:/app:rw
     networks:
