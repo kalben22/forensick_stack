@@ -2,7 +2,10 @@ import subprocess, uuid, shutil, os
 from pathlib import Path
 from forensicstack.core.plugin_registry import PLUGIN_REGISTRY
 
-TMP_BASE = Path("tmp_jobs")
+# Anchor to the backend package root — works both in Docker (/app) and on
+# the Windows host, regardless of process working directory.
+_BACKEND_DIR = Path(__file__).resolve().parent.parent.parent.parent
+TMP_BASE = _BACKEND_DIR / "tmp_jobs"
 
 class DockerExecutor:
     @staticmethod

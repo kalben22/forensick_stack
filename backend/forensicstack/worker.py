@@ -1,8 +1,10 @@
 # forensicstack/worker.py
 import os
+import platform
 import json
 import time
 import redis
+from pathlib import Path
 from dotenv import load_dotenv
 from minio import Minio
 
@@ -50,6 +52,18 @@ def worker_loop():
         tool = job_data["tool"]
         input_path = job_data["input_path"]
         input_type = job_data.get("input_type")
+
+        # Normalise input_path to an absolute host path.
+        # The API stores an absolute path anchored to its own runtime root
+        # (Docker: /app/..., or host: C:\...\backend\...).  When the worker
+        # runs on Windows but receives a Linux Docker path (/app/...), translate
+        # it to the corresponding Windows path via the bind-mount equivalence
+        # /app == backend_dir.
+        _backend_dir = Path(__file__).resolve().parent.parent
+        if platform.system() == "Windows" and input_path.startswith("/app/"):
+            input_path = str(_backend_dir / input_path[5:])  # strip "/app/"
+        elif not Path(input_path).is_absolute():
+            input_path = str(_backend_dir / input_path)
 
         # set running
         r.hset(f"job:{job_id}", mapping={"status": "running"})

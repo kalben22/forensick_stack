@@ -105,8 +105,11 @@ async def direct_analyze(
     MAX_UPLOAD_BYTES = 5 * 1024 ** 3  # 5 GB
 
     # Write the uploaded file to a local temp dir (shared with the worker).
+    # Use __file__-based absolute path so it resolves correctly regardless of
+    # whether the API runs in Docker (/app) or directly on the host.
     # Stream in 1 MB chunks so a 5 GB dump never fully resides in RAM.
-    upload_dir = Path("tmp_jobs") / "uploads" / str(uuid4())
+    _backend_dir = Path(__file__).resolve().parent.parent.parent.parent
+    upload_dir = _backend_dir / "tmp_jobs" / "uploads" / str(uuid4())
     upload_dir.mkdir(parents=True, exist_ok=True)
     safe_filename = Path(file.filename).name if file.filename else "upload"
     file_path = upload_dir / safe_filename
@@ -126,7 +129,7 @@ async def direct_analyze(
 
     job_id = submit_job(
         tool=tool,
-        input_path=str(file_path),
+        input_path=str(file_path.resolve()),  # absolute path — safe on both Docker and host
         input_type=feature,
     )
 
