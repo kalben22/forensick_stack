@@ -10,33 +10,14 @@
 #   JOB_ID            — used to prefix output filenames (set by DockerExecutor)
 #   VOLATILITY_PLUGIN — specific plugin to run (default: windows.pslist)
 #
-# Symbol tables:
-#   Must be pre-seeded into the Docker volume forensicstack_vol3_symbols
-#   by running the seed script ONCE on the host before the first analysis:
-#     Windows: .\scripts\seed-vol3-symbols.ps1
-#     Linux:   ./scripts/seed-vol3-symbols.sh
-#   The volume is mounted at /root/.cache/volatility3 inside this container.
+# Symbol tables are baked into the image at build time — no runtime download,
+# no Docker volume needed.  Rebuild the image to get updated symbols.
 # =============================================================================
 set -euo pipefail
 
 INPUT_DIR="/data"
 OUTPUT_DIR="/output"
 JOB_ID="${JOB_ID:-default}"
-SYMBOLS_DIR="/root/.cache/volatility3/symbols/windows"
-
-# ---------------------------------------------------------------------------
-# Check symbols are present
-# ---------------------------------------------------------------------------
-if [ ! -d "${SYMBOLS_DIR}" ] || [ -z "$(ls -A "${SYMBOLS_DIR}" 2>/dev/null)" ]; then
-    echo "[volatility] ERROR: No symbol tables found at ${SYMBOLS_DIR}"
-    echo "[volatility] Run the seed script once on the host to install symbols:"
-    echo "[volatility]   Windows: .\\scripts\\seed-vol3-symbols.ps1"
-    echo "[volatility]   Linux:   ./scripts/seed-vol3-symbols.sh"
-    exit 1
-fi
-
-ISF_COUNT=$(find "${SYMBOLS_DIR}" -name '*.json.xz' | wc -l)
-echo "[volatility] Symbols : ${ISF_COUNT} ISF files found"
 
 # ---------------------------------------------------------------------------
 # Find the input file

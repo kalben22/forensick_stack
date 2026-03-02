@@ -42,13 +42,10 @@ PLUGIN_REGISTRY = {
         "memory": "6g",
         "cpus": "2",
         "timeout": 7200,
-        # Volatility 3 downloads symbol tables (ISF) on first run → needs network
-        # and must write its cache to ~/.cache/volatility3 → disable read-only.
-        # plugin_volumes: named Docker volume persists symbol cache between runs
-        # so symbols are only downloaded once, not on every job.
-        "network": "bridge",
+        # Symbols are baked into the image at build time — no volume needed.
+        # network: none (no external access required at runtime).
+        "network": "none",
         "readonly": False,
-        "plugin_volumes": ["forensicstack_vol3_symbols:/root/.cache/volatility3"],
         "features": [
             {
                 "id": "windows.pslist",
