@@ -38,7 +38,7 @@ Write-Step "Checking prerequisites"
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     Write-Fail "Docker not found. Install Docker Desktop from https://www.docker.com/products/docker-desktop"
 }
-docker info 2>&1 | Out-Null
+$null = docker info 2>&1
 if ($LASTEXITCODE -ne 0) {
     Write-Fail "Docker daemon is not running. Start Docker Desktop first."
 }
