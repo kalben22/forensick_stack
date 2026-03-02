@@ -47,7 +47,7 @@ if ($Tool -eq "all" -or $Tool -eq "volatility") {
 
 if ($Tool -eq "all" -or $Tool -eq "eztools") {
     Write-Host ""
-    Write-Host "[build-tools] EZ Tools run natively on the Windows host — no Docker image needed." -ForegroundColor Cyan
+    Write-Host "[build-tools] EZ Tools run natively on the Windows host - no Docker image needed." -ForegroundColor Cyan
     Write-Host "[build-tools] Install EZ Tools once with:" -ForegroundColor Cyan
     Write-Host "               .\scripts\install-eztools.ps1" -ForegroundColor Green
     Write-Host ""
