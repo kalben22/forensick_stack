@@ -10,8 +10,12 @@
 #   JOB_ID            — used to prefix output filenames (set by DockerExecutor)
 #   VOLATILITY_PLUGIN — specific plugin to run (default: windows.pslist)
 #
-# Symbol tables are baked into the image at build time — no runtime download,
-# no Docker volume needed.  Rebuild the image to get updated symbols.
+# Symbol tables are baked into the image at build time.  When a dump requires
+# additional PDB files (uncommon kernel version), Volatility downloads them
+# from Microsoft Symbol Server and caches them in /root/.cache/volatility3
+# (mapped to the named Docker volume forensicstack_vol3_symbols).
+# A single retry is performed if the first run produces no output — this covers
+# the case where the first-ever symbol download times out or is interrupted.
 # =============================================================================
 set -euo pipefail
 
@@ -33,7 +37,7 @@ echo "[volatility] Input  : $INPUT_FILE"
 echo "[volatility] Job    : $JOB_ID"
 
 # ---------------------------------------------------------------------------
-# Run the requested plugin
+# Run the requested plugin (with one automatic retry on empty output)
 # ---------------------------------------------------------------------------
 PLUGIN="${VOLATILITY_PLUGIN:-windows.pslist}"
 safe_name="${PLUGIN//./_}"
@@ -41,10 +45,25 @@ outfile="${OUTPUT_DIR}/${JOB_ID}_${safe_name}.json"
 logfile="${OUTPUT_DIR}/${JOB_ID}_${safe_name}.log"
 
 echo "[volatility] Plugin : $PLUGIN"
-vol -f "$INPUT_FILE" --renderer json "$PLUGIN" \
-    > "$outfile" 2>"$logfile" || true
 
-# Always surface stderr so docker logs / the worker can see what went wrong
+run_vol() {
+    vol -f "$INPUT_FILE" --renderer json "$PLUGIN" \
+        > "$outfile" 2>"$logfile" || true
+}
+
+run_vol
+
+# If the output file is empty (0 bytes), the run likely failed due to a
+# first-run symbol download issue.  Retry once after a short delay so the
+# cached PDB/ISF file from the first attempt is available.
+if [[ ! -s "$outfile" ]]; then
+    echo "[volatility] Output empty on first attempt — retrying in 5 s..."
+    rm -f "$outfile"
+    sleep 5
+    run_vol
+fi
+
+# Always surface stderr so docker logs / the worker can see diagnostics
 if [[ -s "$logfile" ]]; then
     echo "[volatility] --- stderr ---"
     cat "$logfile"

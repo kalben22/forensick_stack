@@ -147,14 +147,11 @@ def worker_loop():
                 "output_prefix": prefix
             })
 
-            # cleanup tmp job dir (safe)
+            # cleanup: remove the whole job dir (only contains output/ now —
+            # input is never copied, the source upload dir is preserved).
             try:
-                import shutil
-                shutil.rmtree(output_dir, ignore_errors=True)
-                parent = os.path.dirname(output_dir)
-                # remove job parent if empty
-                if os.path.isdir(parent) and not os.listdir(parent):
-                    shutil.rmtree(parent, ignore_errors=True)
+                job_dir = Path(output_dir).parent
+                shutil.rmtree(str(job_dir), ignore_errors=True)
             except Exception:
                 pass
 

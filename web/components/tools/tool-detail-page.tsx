@@ -11,7 +11,6 @@ import {
   Shield,
   Upload,
   Play,
-  Download,
   CheckCircle2,
   XCircle,
   Clock,
@@ -193,19 +192,6 @@ export function ToolDetailPage({ slug }: Props) {
     }
   }
 
-  // ── Download results ───────────────────────────────────────────────────────
-
-  const handleDownload = () => {
-    if (!jobData?.findings) return
-    const blob = new Blob([JSON.stringify(jobData.findings, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${slug}_${selectedFeature?.id ?? 'results'}_${jobId?.slice(0, 8)}.json`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
   const isDone = jobData?.status === 'done' || jobData?.status === 'completed'
   const isFailed = jobData?.status === 'failed'
   const isRunning = jobData?.status === 'queued' || jobData?.status === 'running' || jobData?.status === 'normalizing'
@@ -222,8 +208,9 @@ export function ToolDetailPage({ slug }: Props) {
   const findings = isDone
     ? (jobData?.findings as Array<Record<string, unknown>> | undefined) ?? null
     : null
-  const hasRealFindings = findings && findings.length > 0 && findings[0]?.artifact_type !== '_error'
-  const resultCount = hasRealFindings ? findings!.length : 0
+  const resultCount = findings && findings.length > 0 && findings[0]?.artifact_type !== '_error'
+    ? findings.length
+    : 0
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -624,18 +611,6 @@ export function ToolDetailPage({ slug }: Props) {
                       )
                     })()}
 
-                    {/* Download button — always at the bottom of the card */}
-                    {hasRealFindings && (
-                      <Button
-                        onClick={handleDownload}
-                        variant="outline"
-                        size="sm"
-                        className="w-full font-mono text-xs border-forensic-green/30 text-forensic-green hover:bg-forensic-green/10"
-                      >
-                        <Download className="mr-2 size-4" />
-                        Télécharger les résultats (JSON) — {resultCount.toLocaleString()} entrée{resultCount !== 1 ? 's' : ''}
-                      </Button>
-                    )}
                   </CardContent>
                 </Card>
               )}

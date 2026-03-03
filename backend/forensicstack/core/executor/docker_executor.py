@@ -1,4 +1,4 @@
-import subprocess, uuid, shutil, os
+import subprocess, uuid, os
 from pathlib import Path
 from forensicstack.core.plugin_registry import PLUGIN_REGISTRY
 
@@ -43,17 +43,16 @@ class DockerExecutor:
 
         job_id = str(uuid.uuid4())
         job_dir = TMP_BASE / job_id
-        job_in = job_dir / "input"
         job_out = job_dir / "output"
-        job_in.mkdir(parents=True, exist_ok=True)
         job_out.mkdir(parents=True, exist_ok=True)
 
-        # copy input into job dir (safer than binding host dir directly)
+        # Mount the source location directly (read-only) — no file copy needed.
+        # For files: mount the parent directory so the file appears as /data/<name>.
+        # For directories: mount the directory itself.
+        # This avoids copying large files (e.g. 2 GB memory dumps) into a temp dir,
+        # dramatically speeding up startup and eliminating disk waste.
         src = Path(input_path)
-        if src.is_dir():
-            shutil.copytree(src, job_in, dirs_exist_ok=True)
-        else:
-            shutil.copy2(src, job_in)
+        data_vol_src = src if src.is_dir() else src.parent
 
         image = plugin["image"]
         memory = plugin.get("memory","1g")
@@ -105,7 +104,7 @@ class DockerExecutor:
         # Use _host_path() so DooD volume mounts work on Windows Docker Desktop:
         # the daemon processes paths relative to the HOST, not the worker container.
         cmd += envs + [
-            "-v", f"{_host_path(job_in.resolve())}:{data_mount}:ro",
+            "-v", f"{_host_path(data_vol_src.resolve())}:{data_mount}:ro",
             "-v", f"{_host_path(job_out.resolve())}:{output_mount}",
             image
         ]
