@@ -293,7 +293,7 @@ class TestNormalizers:
         assert findings[0].artifact_type == "file_metadata"
         assert findings[0].data["Make"] == "Canon"
 
-    def test_volatility_normalizer(self, tmp_path):
+    def test_volatility_normalizer_treegrid(self, tmp_path):
         from forensicstack.core.normalizers.volatility_normalizer import VolatilityNormalizer
         data = {"rows": [{"PID": 4, "ImageFileName": "System"}]}
         out_dir = self._write_tmp(tmp_path, "windows_pslist.json", data)
@@ -301,3 +301,39 @@ class TestNormalizers:
         assert len(findings) == 1
         assert findings[0].tool == "volatility"
         assert findings[0].data["PID"] == 4
+
+    def test_volatility_normalizer_flat_array(self, tmp_path):
+        """vol3 --renderer json emits a flat list of dicts in v2+ builds."""
+        from forensicstack.core.normalizers.volatility_normalizer import VolatilityNormalizer
+        data = [
+            {"PID": 4, "PPID": 0, "ImageFileName": "System", "__children": []},
+            {"PID": 272, "PPID": 4, "ImageFileName": "smss.exe", "__children": []},
+        ]
+        out_dir = self._write_tmp(tmp_path, "abc_windows_pslist.json", data)
+        findings = VolatilityNormalizer().normalize(str(out_dir))
+        assert len(findings) == 2
+        assert findings[0].data["PID"] == 4
+        assert findings[1].data["ImageFileName"] == "smss.exe"
+        # __children must be stripped
+        assert "__children" not in findings[0].data
+
+    def test_volatility_normalizer_empty_array_no_error_finding(self, tmp_path):
+        """A valid empty result (0 rows) should not produce an error finding."""
+        from forensicstack.core.normalizers.volatility_normalizer import VolatilityNormalizer
+        out_dir = self._write_tmp(tmp_path, "abc_windows_netscan.json", [])
+        (tmp_path / "abc_windows_netscan.log").write_text(
+            "Progress: 100% scanning...", encoding="utf-8"
+        )
+        findings = VolatilityNormalizer().normalize(str(out_dir))
+        assert findings == []
+
+    def test_volatility_normalizer_no_json_surfaces_log_error(self, tmp_path):
+        """When vol3 produces no JSON at all, the log error should be surfaced."""
+        from forensicstack.core.normalizers.volatility_normalizer import VolatilityNormalizer
+        (tmp_path / "abc_windows_pslist.log").write_text(
+            "ERROR: Unable to determine the memory image profile", encoding="utf-8"
+        )
+        findings = VolatilityNormalizer().normalize(str(tmp_path))
+        assert len(findings) == 1
+        assert findings[0].artifact_type == "_error"
+        assert "profile" in findings[0].data["message"]
