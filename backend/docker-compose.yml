@@ -126,6 +126,12 @@ services:
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      # HOST_BACKEND_DIR: host-side absolute path that maps to /app in the
+      # container (= the backend/ directory).  Required for DooD volume mounts
+      # on Windows Docker Desktop.  Falls back to ${PWD} (= the directory
+      # where `docker-compose up` is run — should be backend/).
+      # Override in .env if needed:  HOST_BACKEND_DIR=C:\Users\...\backend
+      HOST_BACKEND_DIR: "${HOST_BACKEND_DIR:-${PWD}}"
     volumes:
       - .:/app:rw
       - /var/run/docker.sock:/var/run/docker.sock   # worker spawns forensic tool containers

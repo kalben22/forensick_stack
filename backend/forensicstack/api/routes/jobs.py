@@ -127,9 +127,19 @@ async def direct_analyze(
                 raise HTTPException(status_code=413, detail="File exceeds the 5 GB upload limit.")
             out.write(chunk)
 
+    # Store path RELATIVE to _backend_dir so the worker resolves it correctly
+    # regardless of its own runtime (Docker/Linux vs native/Windows).
+    # Storing an absolute path causes '/app/C:\\...' corruption when the API
+    # runs on Windows but the worker is inside a Linux Docker container.
+    try:
+        rel = file_path.resolve().relative_to(_backend_dir)
+        stored_path = rel.as_posix()   # e.g. "tmp_jobs/uploads/{uuid}/file.mem"
+    except ValueError:
+        stored_path = str(file_path.resolve())
+
     job_id = submit_job(
         tool=tool,
-        input_path=str(file_path.resolve()),  # absolute path — safe on both Docker and host
+        input_path=stored_path,
         input_type=feature,
     )
 

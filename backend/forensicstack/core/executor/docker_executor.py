@@ -7,6 +7,33 @@ from forensicstack.core.plugin_registry import PLUGIN_REGISTRY
 _BACKEND_DIR = Path(__file__).resolve().parent.parent.parent.parent
 TMP_BASE = _BACKEND_DIR / "tmp_jobs"
 
+# HOST_BACKEND_DIR: when the worker runs inside a Docker container (DooD —
+# Docker-outside-Docker), volume mount paths in `docker run -v` commands must
+# be HOST paths, not container-internal paths.  Set this env var to the
+# absolute host path that maps to /app (or _BACKEND_DIR) inside the container.
+#
+# docker-compose.yml sets it via:  HOST_BACKEND_DIR: "${PWD}"
+# Manual run example:              HOST_BACKEND_DIR=C:\Users\...\backend
+#
+# If unset the container-internal path is used, which works on native Linux
+# but fails on Windows DooD.
+_HOST_BACKEND_DIR = os.getenv("HOST_BACKEND_DIR", "").strip() or None
+
+
+def _host_path(container_path: Path) -> str:
+    """
+    Translate a container-internal path to the equivalent host path.
+    Required for Docker volume mounts in DooD (Docker-outside-Docker) on
+    Windows where the daemon runs on the host and doesn't know /app/...
+    """
+    if _HOST_BACKEND_DIR:
+        try:
+            rel = container_path.relative_to(_BACKEND_DIR)
+            return str(Path(_HOST_BACKEND_DIR) / rel)
+        except ValueError:
+            pass
+    return str(container_path)
+
 class DockerExecutor:
     @staticmethod
     def run_plugin(tool_name: str, input_path: str, input_type: str|None = None, timeout: int|None = None):
@@ -75,9 +102,11 @@ class DockerExecutor:
         # Named volumes declared in plugin config (persist between runs, e.g. symbol caches)
         for vol in plugin.get("plugin_volumes", []):
             cmd += ["-v", vol]
+        # Use _host_path() so DooD volume mounts work on Windows Docker Desktop:
+        # the daemon processes paths relative to the HOST, not the worker container.
         cmd += envs + [
-            "-v", f"{job_in.resolve()}:{data_mount}:ro",
-            "-v", f"{job_out.resolve()}:{output_mount}",
+            "-v", f"{_host_path(job_in.resolve())}:{data_mount}:ro",
+            "-v", f"{_host_path(job_out.resolve())}:{output_mount}",
             image
         ]
 
