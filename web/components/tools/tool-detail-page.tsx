@@ -8,6 +8,7 @@ import {
   FileSearch,
   Smartphone,
   Cpu,
+  Shield,
   Upload,
   Play,
   Download,
@@ -17,6 +18,8 @@ import {
   Activity,
   ChevronRight,
   FileWarning,
+  RotateCcw,
+  Info,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -32,41 +35,53 @@ import type { ToolFeature } from '@/lib/api/jobs'
 // ── Metadata ──────────────────────────────────────────────────────────────────
 
 const CATEGORY_ICON: Record<string, React.ElementType> = {
-  memory:         Brain,
-  metadata:       FileSearch,
-  mobile_ios:     Smartphone,
-  mobile_android: Smartphone,
+  memory:             Brain,
+  metadata:           FileSearch,
+  mobile_ios:         Smartphone,
+  mobile_android:     Smartphone,
+  windows_artifacts:  Shield,
 }
 const CATEGORY_COLOR: Record<string, string> = {
-  memory:         'text-forensic-cyan',
-  metadata:       'text-forensic-amber',
-  mobile_ios:     'text-forensic-green',
-  mobile_android: 'text-emerald-400',
+  memory:             'text-forensic-cyan',
+  metadata:           'text-forensic-amber',
+  mobile_ios:         'text-forensic-green',
+  mobile_android:     'text-emerald-400',
+  windows_artifacts:  'text-violet-400',
 }
 const CATEGORY_BG: Record<string, string> = {
-  memory:         'bg-forensic-cyan/10',
-  metadata:       'bg-forensic-amber/10',
-  mobile_ios:     'bg-forensic-green/10',
-  mobile_android: 'bg-emerald-500/10',
+  memory:             'bg-forensic-cyan/10',
+  metadata:           'bg-forensic-amber/10',
+  mobile_ios:         'bg-forensic-green/10',
+  mobile_android:     'bg-emerald-500/10',
+  windows_artifacts:  'bg-violet-500/10',
 }
 const CATEGORY_BORDER: Record<string, string> = {
-  memory:         'border-forensic-cyan/30',
-  metadata:       'border-forensic-amber/30',
-  mobile_ios:     'border-forensic-green/30',
-  mobile_android: 'border-emerald-500/30',
+  memory:             'border-forensic-cyan/30',
+  metadata:           'border-forensic-amber/30',
+  mobile_ios:         'border-forensic-green/30',
+  mobile_android:     'border-emerald-500/30',
+  windows_artifacts:  'border-violet-500/30',
 }
 const CATEGORY_LABEL: Record<string, string> = {
-  memory:         'Memory Analysis',
-  metadata:       'Metadata Extraction',
-  mobile_ios:     'iOS Forensics',
-  mobile_android: 'Android Forensics',
+  memory:             'Memory Analysis',
+  metadata:           'Metadata Extraction',
+  mobile_ios:         'iOS Forensics',
+  mobile_android:     'Android Forensics',
+  windows_artifacts:  'Windows Artifacts',
 }
 const TOOL_LABEL: Record<string, string> = {
   volatility: 'Volatility 3',
   exiftool:   'ExifTool',
   ileapp:     'iLEAPP',
   aleapp:     'aLEAPP',
+  eztools:    'EZ Tools',
 }
+
+// Tools where 0 results is normal expected behavior for some inputs
+const EXPECTED_EMPTY_TOOLS = new Set(['volatility', 'exiftool'])
+const EXPECTED_EMPTY_FEATURES = new Set([
+  'windows.cmdline', 'windows.netscan', 'windows.malfind', 'windows.dlllist',
+])
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -194,6 +209,21 @@ export function ToolDetailPage({ slug }: Props) {
   const isDone = jobData?.status === 'done' || jobData?.status === 'completed'
   const isFailed = jobData?.status === 'failed'
   const isRunning = jobData?.status === 'queued' || jobData?.status === 'running' || jobData?.status === 'normalizing'
+
+  const handleReset = () => {
+    setFile(null)
+    setJobId(null)
+    setValidationError(null)
+    setUploadProgress(0)
+    setJobFilename('')
+    setJobSizeBytes(0)
+  }
+
+  const findings = isDone
+    ? (jobData?.findings as Array<Record<string, unknown>> | undefined) ?? null
+    : null
+  const hasRealFindings = findings && findings.length > 0 && findings[0]?.artifact_type !== '_error'
+  const resultCount = hasRealFindings ? findings!.length : 0
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -436,8 +466,28 @@ export function ToolDetailPage({ slug }: Props) {
                 <Card className="border-border/40 bg-card/30">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between flex-wrap gap-2">
-                      <CardTitle className="font-mono text-sm">Résultats</CardTitle>
-                      {jobData?.status && <StatusBadge status={jobData.status} />}
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="font-mono text-sm">Résultats</CardTitle>
+                        {isDone && resultCount > 0 && (
+                          <Badge variant="outline" className="font-mono text-[10px] border-forensic-green/30 text-forensic-green">
+                            {resultCount.toLocaleString()} entrée{resultCount !== 1 ? 's' : ''}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {jobData?.status && <StatusBadge status={jobData.status} />}
+                        {(isDone || isFailed) && (
+                          <Button
+                            onClick={handleReset}
+                            variant="ghost"
+                            size="sm"
+                            className="font-mono text-[10px] h-7 px-2 text-muted-foreground hover:text-foreground gap-1"
+                          >
+                            <RotateCcw className="size-3" />
+                            Nouvelle analyse
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="flex flex-col gap-4">
@@ -456,13 +506,23 @@ export function ToolDetailPage({ slug }: Props) {
                         </div>
                       ))}
                     </div>
+                    {/* Job ID */}
+                    <p className="text-[10px] font-mono text-muted-foreground/50 select-all">
+                      job: {jobId}
+                    </p>
 
                     {/* Polling indicator */}
                     {isRunning && (
-                      <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
-                        <Activity className="size-3 animate-pulse text-forensic-cyan" />
-                        Polling toutes les 3s…
-                        <span className="text-forensic-cyan">{jobData?.status}</span>
+                      <div className="flex items-center gap-3 rounded-lg border border-forensic-cyan/20 bg-forensic-cyan/5 px-3 py-2">
+                        <Activity className="size-4 shrink-0 animate-pulse text-forensic-cyan" />
+                        <div className="flex flex-col gap-0.5">
+                          <p className="text-xs font-mono font-medium text-forensic-cyan">
+                            {jobData?.status === 'queued'      && 'En attente de traitement…'}
+                            {jobData?.status === 'running'     && 'Analyse en cours dans le conteneur…'}
+                            {jobData?.status === 'normalizing' && 'Normalisation des résultats…'}
+                          </p>
+                          <p className="text-[10px] font-mono text-muted-foreground">Mise à jour toutes les 3 s</p>
+                        </div>
                       </div>
                     )}
 
@@ -476,11 +536,20 @@ export function ToolDetailPage({ slug }: Props) {
 
                     {/* Findings */}
                     {isDone && (() => {
-                      const findings = jobData?.findings as Array<Record<string, unknown>> | undefined
                       if (!findings || findings.length === 0) {
+                        const mightBeExpected = EXPECTED_EMPTY_TOOLS.has(slug) ||
+                          EXPECTED_EMPTY_FEATURES.has(selectedFeature?.id ?? '')
                         return (
-                          <div className="rounded-lg border border-border/30 bg-card/30 p-3 text-xs font-mono text-muted-foreground">
-                            Aucun résultat retourné. Vérifiez que le fichier est compatible avec la feature sélectionnée et que l&apos;image Docker de l&apos;outil est bien buildée.
+                          <div className="rounded-lg border border-border/30 bg-card/30 p-4 flex flex-col gap-2">
+                            <p className="text-xs font-mono font-semibold text-muted-foreground flex items-center gap-1">
+                              <Info className="size-3 shrink-0" />
+                              Aucun résultat retourné
+                            </p>
+                            <p className="text-xs font-mono text-muted-foreground/70 leading-relaxed">
+                              {mightBeExpected
+                                ? "Ce plugin n'a retourné aucune entrée pour ce fichier. C'est un comportement normal pour certains plugins selon le type de capture (ex. windows.cmdline peut retourner 0 entrée sur certains dumps)."
+                                : "Vérifiez que le fichier est compatible avec la feature sélectionnée et que l'image Docker de l'outil est bien buildée."}
+                            </p>
                           </div>
                         )
                       }
@@ -510,11 +579,13 @@ export function ToolDetailPage({ slug }: Props) {
                         : null
                       return (
                         <div className="flex flex-col gap-2">
-                          <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-                            {findings.length} résultat{findings.length !== 1 ? 's' : ''}
-                          </p>
+                          {dataKeys && (
+                            <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+                              {dataKeys.length} colonne{dataKeys.length !== 1 ? 's' : ''}
+                            </p>
+                          )}
                           {dataKeys ? (
-                            <ScrollArea className="max-h-96 rounded-lg border border-border/30 bg-background/50">
+                            <ScrollArea className="max-h-[520px] rounded-lg border border-border/30 bg-background/50">
                               <div className="overflow-x-auto">
                                 <table className="w-full text-[10px] font-mono">
                                   <thead>
@@ -530,7 +601,7 @@ export function ToolDetailPage({ slug }: Props) {
                                     {findings.map((f, i) => (
                                       <tr key={i} className="border-b border-border/20 hover:bg-card/30 transition-colors">
                                         {Object.values(f.data as Record<string, unknown>).map((val, j) => (
-                                          <td key={j} className="px-2 py-1 whitespace-nowrap text-foreground/80">
+                                          <td key={j} className="px-2 py-1 whitespace-nowrap text-foreground/80 max-w-[260px] truncate">
                                             {val === null || val === undefined
                                               ? <span className="text-muted-foreground/40">—</span>
                                               : String(val)}
@@ -549,18 +620,22 @@ export function ToolDetailPage({ slug }: Props) {
                               </pre>
                             </ScrollArea>
                           )}
-                          <Button
-                            onClick={handleDownload}
-                            variant="outline"
-                            size="sm"
-                            className="w-full font-mono text-xs border-forensic-green/30 text-forensic-green hover:bg-forensic-green/10"
-                          >
-                            <Download className="mr-2 size-4" />
-                            Télécharger les résultats (JSON)
-                          </Button>
                         </div>
                       )
                     })()}
+
+                    {/* Download button — always at the bottom of the card */}
+                    {hasRealFindings && (
+                      <Button
+                        onClick={handleDownload}
+                        variant="outline"
+                        size="sm"
+                        className="w-full font-mono text-xs border-forensic-green/30 text-forensic-green hover:bg-forensic-green/10"
+                      >
+                        <Download className="mr-2 size-4" />
+                        Télécharger les résultats (JSON) — {resultCount.toLocaleString()} entrée{resultCount !== 1 ? 's' : ''}
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               )}
