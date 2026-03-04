@@ -94,6 +94,7 @@ services:
       - "8001:8000"
     volumes:
       - .:/app:rw
+      - tmp_jobs:/app/tmp_jobs   # for storing job results before uploading to MinIO
     networks:
       - forensicstack
 
@@ -133,6 +134,7 @@ services:
       HOST_BACKEND_DIR: "${HOST_BACKEND_DIR:-}"
     volumes:
       - .:/app:rw
+      - tmp_jobs:/app/tmp_jobs
       - /var/run/docker.sock:/var/run/docker.sock   # worker spawns forensic tool containers
     networks:
       - forensicstack
@@ -142,6 +144,7 @@ volumes:
   redis_data:
   minio_data:
   chroma_data:
+  tmp_jobs:
 
 networks:
   forensicstack:

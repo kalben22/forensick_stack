@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Optional
 from uuid import uuid4
@@ -126,6 +127,8 @@ async def direct_analyze(
                 upload_dir.rmdir()
                 raise HTTPException(status_code=413, detail="File exceeds the 5 GB upload limit.")
             out.write(chunk)
+        out.flush()
+        os.fsync(out.fileno())
 
     # Store path RELATIVE to _backend_dir so the worker resolves it correctly
     # regardless of its own runtime (Docker/Linux vs native/Windows).
