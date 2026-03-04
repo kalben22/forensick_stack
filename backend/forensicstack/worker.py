@@ -47,18 +47,17 @@ def wait_for_input_path(path: str, timeout: float = 10.0, interval: float = 0.25
     Checks for file existence and stable file size (no growth) within the timeout.
     Raises TimeoutError if the file isn't ready within the timeout.
     """
-    import time as _time
     p = Path(path)
-    deadline = _time.monotonic() + timeout   
-    while _time.monotonic() < deadline:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
         if p.is_dir() and any(p.iterdir()):
             return
         if p.is_file() and p.stat().st_size > 0:
             return
-        _time.sleep(interval)
-    # Final check for stable file size before giving up
+        time.sleep(interval)
+    # File not ready in time
     if p.exists():
-            raise RuntimeError(f"Input file '{path}' exists but is empty after {timeout} seconds.")
+        raise RuntimeError(f"Input file '{path}' exists but is empty after {timeout} seconds.")
     raise TimeoutError(f"Input file '{path}' not found after {timeout} seconds.")
     
 def cleanup_old_tmp_jobs(tmp_base: Path, max_age_s: int = _TMP_MAX_AGE_S) -> int:
@@ -121,7 +120,6 @@ def cleanup_upload_dir(input_path: str, tmp_base: Path) -> None:
 
 
 def upload_dir_to_minio(prefix: str, dir_path: str):
-    import os
     for root, _, files in os.walk(dir_path):
         for fname in files:
             fpath = os.path.join(root, fname)
