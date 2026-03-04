@@ -76,6 +76,53 @@ const TOOL_LABEL: Record<string, string> = {
   eztools:    'EZ Tools',
 }
 
+// ── Error message helpers ────────────────────────────────────────────────────
+
+function friendlyError(raw: string): { title: string; detail: string } {
+  if (!raw) return { title: 'Erreur inconnue', detail: '' }
+
+  if (raw.includes('timed out') || raw.includes('TimeoutExpired'))
+    return {
+      title: "L'analyse a dépassé le délai imparti",
+      detail: 'Essayez un plugin moins intensif ou un fichier plus petit.',
+    }
+  if (
+    raw.includes('No input file found') ||
+    raw.includes('No such file or directory') ||
+    raw.includes('mount source path') ||
+    raw.includes('invalid mount config')
+  )
+    return {
+      title: 'Fichier introuvable dans le conteneur',
+      detail:
+        'Vérifiez que le worker est démarré et que le fichier a bien été uploadé. Si le problème persiste, relancez le worker.',
+    }
+  if (raw.includes('Cannot connect to the Docker daemon') || raw.includes('docker: not found'))
+    return {
+      title: 'Docker inaccessible',
+      detail: "Assurez-vous que Docker Desktop est démarré et que le socket Docker est accessible par le worker.",
+    }
+  if (raw.includes('Unable to find image') || raw.includes('No such image'))
+    return {
+      title: "Image Docker introuvable",
+      detail: "Exécutez scripts/build-tools.sh (Linux) ou scripts\\build-tools.ps1 (Windows) pour construire les images forensiques.",
+    }
+  if (raw.includes('Plugin not registered'))
+    return {
+      title: "Outil non reconnu",
+      detail: raw,
+    }
+  if (raw.includes('OOM') || raw.includes('out of memory') || raw.includes('Killed'))
+    return {
+      title: 'Mémoire insuffisante',
+      detail: 'Le conteneur a manqué de RAM. Augmentez la limite mémoire dans plugin_registry.py ou utilisez un fichier plus petit.',
+    }
+
+  // Generic fallback: trim overly verbose Docker daemon output
+  const trimmed = raw.length > 300 ? raw.slice(0, 300) + '…' : raw
+  return { title: 'Échec de l\'analyse', detail: trimmed }
+}
+
 // Tools where 0 results is normal expected behavior for some inputs
 const EXPECTED_EMPTY_TOOLS = new Set(['volatility', 'exiftool'])
 const EXPECTED_EMPTY_FEATURES = new Set([
@@ -514,12 +561,22 @@ export function ToolDetailPage({ slug }: Props) {
                     )}
 
                     {/* Error */}
-                    {isFailed && (
-                      <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs font-mono text-destructive">
-                        <p className="font-semibold mb-1">Analyse échouée</p>
-                        <p>{jobData?.error ?? 'Erreur inconnue'}</p>
-                      </div>
-                    )}
+                    {isFailed && (() => {
+                      const { title, detail } = friendlyError(jobData?.error ?? '')
+                      return (
+                        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 flex flex-col gap-2">
+                          <p className="text-xs font-mono font-semibold text-destructive flex items-center gap-1.5">
+                            <XCircle className="size-3.5 shrink-0" />
+                            {title}
+                          </p>
+                          {detail && (
+                            <p className="text-[11px] font-mono text-destructive/80 leading-relaxed">
+                              {detail}
+                            </p>
+                          )}
+                        </div>
+                      )
+                    })()}
 
                     {/* Findings */}
                     {isDone && (() => {

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
-INPUT="/data"
-OUTPUT="/output"
+# INPUT_PATH / OUTPUT_PATH injected by DockerExecutor
+INPUT="${INPUT_PATH:-/data}"
+OUTPUT="${OUTPUT_PATH:-/output}"
 JOB_ID="${JOB_ID:-default}"
 
 OUTFILE="${OUTPUT}/${JOB_ID}_raw.json"

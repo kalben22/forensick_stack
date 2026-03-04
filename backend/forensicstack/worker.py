@@ -41,17 +41,18 @@ if not minio_client.bucket_exists(BUCKET):
 
 def cleanup_old_tmp_jobs(tmp_base: Path, max_age_s: int = _TMP_MAX_AGE_S) -> int:
     """
-    Remove job execution dirs under tmp_base that are older than max_age_s.
-    Only removes subdirectories of tmp_base that look like UUID job dirs
-    (not the uploads/ subdir — that's cleaned by the job itself).
-    Returns the number of directories removed.
+    Remove stale directories under tmp_base (job output dirs) and under
+    tmp_base/uploads/ (input upload dirs) that are older than max_age_s.
+    Returns the total number of directories removed.
     """
     if not tmp_base.is_dir():
         return 0
     removed = 0
     cutoff = time.time() - max_age_s
+
+    # Clean job output dirs (direct children of tmp_base, except uploads/)
     for d in tmp_base.iterdir():
-        if d.name == "uploads":          # keep the uploads subdir
+        if d.name == "uploads":
             continue
         if not d.is_dir():
             continue
@@ -61,7 +62,40 @@ def cleanup_old_tmp_jobs(tmp_base: Path, max_age_s: int = _TMP_MAX_AGE_S) -> int
                 removed += 1
         except OSError:
             pass
+
+    # Also clean individual upload dirs inside uploads/ that are stale.
+    # These are normally removed immediately after each job but this catches
+    # any that were missed (e.g. worker restart mid-job).
+    uploads_root = tmp_base / "uploads"
+    if uploads_root.is_dir():
+        for d in uploads_root.iterdir():
+            if not d.is_dir():
+                continue
+            try:
+                if d.stat().st_mtime < cutoff:
+                    shutil.rmtree(d, ignore_errors=True)
+                    removed += 1
+            except OSError:
+                pass
+
     return removed
+
+
+def cleanup_upload_dir(input_path: str, tmp_base: Path) -> None:
+    """
+    Immediately remove the upload directory for a completed/failed job.
+    Only deletes directories that are direct children of tmp_base/uploads/
+    to avoid accidental deletions.
+    """
+    try:
+        p = Path(input_path)
+        upload_dir = p.parent if p.is_file() else p
+        uploads_root = tmp_base / "uploads"
+        # Safety: only delete if the directory sits directly under uploads/
+        if upload_dir.parent.resolve() == uploads_root.resolve():
+            shutil.rmtree(str(upload_dir), ignore_errors=True)
+    except Exception:
+        pass
 
 
 def upload_dir_to_minio(prefix: str, dir_path: str):
@@ -82,7 +116,7 @@ def worker_loop():
         job = r.brpop("job_queue", timeout=5)
         if not job:
             time.sleep(1)
-            # Run temp cleanup roughly every ~50 idle cycles (≈ 5 min)
+            # Run temp cleanup roughly every ~50 idle cycles (â‰ˆ 5 min)
             _cleanup_counter += 1
             if _cleanup_counter >= 50:
                 _cleanup_counter = 0
@@ -103,19 +137,19 @@ def worker_loop():
         # via _backend_dir on whichever OS the worker runs on.
         #
         # Legacy absolute paths (stored before this fix) are handled too:
-        #   - Linux absolute (/app/...)   → kept as-is (Docker worker)
-        #   - Windows absolute (C:\...)   → kept as-is if worker is on Windows;
+        #   - Linux absolute (/app/...)   â†’ kept as-is (Docker worker)
+        #   - Windows absolute (C:\...)   â†’ kept as-is if worker is on Windows;
         #     if worker is on Linux the path is unusable and the job will fail
         #     with a clear error rather than a corrupt '/app/C:\\...' path.
-        #   - /app/ prefix on Windows     → translate to local backend_dir
+        #   - /app/ prefix on Windows     â†’ translate to local backend_dir
         _backend_dir = Path(__file__).resolve().parent.parent
         if not Path(input_path).is_absolute() and not _WIN_ABS_RE.match(input_path):
-            # Relative path (the new normal) — resolve against backend dir
+            # Relative path (the new normal) â€” resolve against backend dir
             input_path = str(_backend_dir / input_path)
         elif platform.system() == "Windows" and input_path.startswith("/app/"):
             # Legacy: Docker-style path received by a native Windows worker
             input_path = str(_backend_dir / input_path[5:])
-        # else: already absolute on the current OS — use as-is
+        # else: already absolute on the current OS â€” use as-is
 
         # set running
         r.hset(f"job:{job_id}", mapping={"status": "running"})
@@ -147,18 +181,22 @@ def worker_loop():
                 "output_prefix": prefix
             })
 
-            # cleanup: remove the whole job dir (only contains output/ now —
-            # input is never copied, the source upload dir is preserved).
+            # Cleanup output job dir
             try:
                 job_dir = Path(output_dir).parent
                 shutil.rmtree(str(job_dir), ignore_errors=True)
             except Exception:
                 pass
 
+            # Cleanup upload dir (the input file) â€” freed immediately after use
+            cleanup_upload_dir(input_path, _TMP_BASE)
+
             print(f"Job {job_id} done")
         except Exception as e:
             r.hset(f"job:{job_id}", mapping={"status": "failed", "error": str(e)})
             print("Error processing job", e)
+            # Cleanup upload dir even on failure to avoid disk leaks
+            cleanup_upload_dir(input_path, _TMP_BASE)
 
 
 if __name__ == "__main__":

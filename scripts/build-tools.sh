@@ -55,10 +55,12 @@ fi
 if [[ "$FILTER" == "all" || "$FILTER" == "volatility" ]]; then
     build_image "Volatility3" "forensicstack/volatility:0.1"  "$PLUGINS_DIR/volatility"
     echo ""
-    echo -e "${YELLOW}[build-tools] ⚠  Volatility3 symbol tables are NOT bundled in the image.${NC}"
-    echo -e "${YELLOW}[build-tools]    Run the following command ONCE to download and seed them:${NC}"
+    echo -e "${GREEN}[build-tools] Volatility3 image built with common Windows kernel symbols baked in.${NC}"
+    echo -e "${YELLOW}[build-tools] ⚠  For extended offline coverage (uncommon kernel versions),${NC}"
+    echo -e "${YELLOW}[build-tools]    pre-populate the symbol cache volume by running ONCE:${NC}"
     echo -e "${GREEN}               ./scripts/seed-vol3-symbols.sh          (Linux / Mac)${NC}"
     echo -e "${GREEN}               .\\scripts\\seed-vol3-symbols.ps1         (Windows PowerShell)${NC}"
+    echo -e "${YELLOW}[build-tools]    (the setup script does this automatically on first install)${NC}"
     echo ""
 fi
 

@@ -43,6 +43,14 @@ if ($Tool -eq "all" -or $Tool -eq "exiftool") {
 
 if ($Tool -eq "all" -or $Tool -eq "volatility") {
     Build-Image "Volatility3" "forensicstack/volatility:0.1" (Join-Path $PluginsDir "volatility")
+    Write-Host ""
+    Write-Host "[build-tools] Volatility3 image built with common Windows kernel symbols baked in." -ForegroundColor Green
+    Write-Host "[build-tools] !!  For extended offline coverage (uncommon kernel versions)," -ForegroundColor Yellow
+    Write-Host "[build-tools]     pre-populate the symbol cache volume by running ONCE:" -ForegroundColor Yellow
+    Write-Host "               .\scripts\seed-vol3-symbols.ps1   (Windows PowerShell)" -ForegroundColor Green
+    Write-Host "               ./scripts/seed-vol3-symbols.sh    (Linux / Mac)" -ForegroundColor Green
+    Write-Host "[build-tools]     (the setup script does this automatically on first install)" -ForegroundColor Yellow
+    Write-Host ""
 }
 
 if ($Tool -eq "all" -or $Tool -eq "eztools") {

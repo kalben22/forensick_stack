@@ -19,14 +19,22 @@
 # =============================================================================
 set -euo pipefail
 
-INPUT_DIR="/data"
-OUTPUT_DIR="/output"
+# INPUT_PATH / OUTPUT_PATH are injected by DockerExecutor:
+#   - DooD mode  : absolute paths inside the shared /app volume
+#   - Native mode: /data and /output (bind mount targets)
+INPUT_DIR="${INPUT_PATH:-/data}"
+OUTPUT_DIR="${OUTPUT_PATH:-/output}"
 JOB_ID="${JOB_ID:-default}"
 
 # ---------------------------------------------------------------------------
 # Find the input file
 # ---------------------------------------------------------------------------
-INPUT_FILE=$(find "$INPUT_DIR" -maxdepth 2 -type f | head -1)
+# Prefer INPUT_FILENAME when available (deterministic, avoids `find` ordering).
+if [[ -n "${INPUT_FILENAME:-}" && -f "$INPUT_DIR/$INPUT_FILENAME" ]]; then
+    INPUT_FILE="$INPUT_DIR/$INPUT_FILENAME"
+else
+    INPUT_FILE=$(find "$INPUT_DIR" -maxdepth 2 -type f | head -1)
+fi
 
 if [[ -z "$INPUT_FILE" ]]; then
     echo "[volatility] ERROR: No input file found in $INPUT_DIR"

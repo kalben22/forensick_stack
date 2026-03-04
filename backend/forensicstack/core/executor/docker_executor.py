@@ -2,29 +2,50 @@ import subprocess, uuid, os
 from pathlib import Path
 from forensicstack.core.plugin_registry import PLUGIN_REGISTRY
 
-# Anchor to the backend package root — works both in Docker (/app) and on
+# Anchor to the backend package root â€” works both in Docker (/app) and on
 # the Windows host, regardless of process working directory.
 _BACKEND_DIR = Path(__file__).resolve().parent.parent.parent.parent
 TMP_BASE = _BACKEND_DIR / "tmp_jobs"
 
-# HOST_BACKEND_DIR: when the worker runs inside a Docker container (DooD —
-# Docker-outside-Docker), volume mount paths in `docker run -v` commands must
-# be HOST paths, not container-internal paths.  Set this env var to the
-# absolute host path that maps to /app (or _BACKEND_DIR) inside the container.
+# â”€â”€ Execution mode detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
-# docker-compose.yml sets it via:  HOST_BACKEND_DIR: "${PWD}"
-# Manual run example:              HOST_BACKEND_DIR=C:\Users\...\backend
+# Two modes are supported:
 #
-# If unset the container-internal path is used, which works on native Linux
-# but fails on Windows DooD.
+#   DooD (Docker-outside-Docker)
+#     The worker itself runs inside a Docker container and spawns child
+#     containers via the host Docker socket.  In this mode, host-path
+#     translation is fragile (especially on Windows) because docker-compose
+#     evaluates ${PWD} differently depending on how / where it is invoked.
+#
+#     Fix: use --volumes-from <worker-container> so the forensic tool container
+#     inherits the worker's filesystem mounts.  The worker already has the
+#     backend directory mapped at /app, so the child sees the same paths with
+#     no translation required.
+#
+#   Native
+#     The worker runs directly on the host (no Docker wrapping).  Bind mounts
+#     use local filesystem paths that Docker Desktop resolves correctly on both
+#     Linux and Windows.  HOST_BACKEND_DIR is not required.
+#
+# Set WORKER_CONTAINER_NAME to the value of `container_name` in docker-compose
+# (default: fs_worker).  The docker-compose.yml injects this automatically.
+
+_WORKER_CONTAINER = os.getenv("WORKER_CONTAINER_NAME", "").strip() or None
+
+
+def _is_dood() -> bool:
+    """True when the worker process is itself running inside a Docker container."""
+    return _WORKER_CONTAINER is not None or Path("/.dockerenv").exists()
+
+
+# Kept for native-mode fallback â€” only used when _is_dood() is False.
 _HOST_BACKEND_DIR = os.getenv("HOST_BACKEND_DIR", "").strip() or None
 
 
 def _host_path(container_path: Path) -> str:
     """
     Translate a container-internal path to the equivalent host path.
-    Required for Docker volume mounts in DooD (Docker-outside-Docker) on
-    Windows where the daemon runs on the host and doesn't know /app/...
+    Only called in native mode (not DooD).
     """
     if _HOST_BACKEND_DIR:
         try:
@@ -33,6 +54,7 @@ def _host_path(container_path: Path) -> str:
         except ValueError:
             pass
     return str(container_path)
+
 
 class DockerExecutor:
     @staticmethod
@@ -46,34 +68,33 @@ class DockerExecutor:
         job_out = job_dir / "output"
         job_out.mkdir(parents=True, exist_ok=True)
 
-        # Mount the source location directly (read-only) — no file copy needed.
         # For files: mount the parent directory so the file appears as /data/<name>.
         # For directories: mount the directory itself.
-        # This avoids copying large files (e.g. 2 GB memory dumps) into a temp dir,
-        # dramatically speeding up startup and eliminating disk waste.
         src = Path(input_path)
         data_vol_src = src if src.is_dir() else src.parent
 
-        image = plugin["image"]
-        memory = plugin.get("memory","1g")
-        cpus = plugin.get("cpus","0.5")
+        image    = plugin["image"]
+        memory   = plugin.get("memory", "1g")
+        cpus     = plugin.get("cpus", "0.5")
+        network  = plugin.get("network", "none")
+        readonly = plugin.get("readonly", True)
+        extra_tmp         = plugin.get("extra_tmpfs", [])
+        windows_container = plugin.get("windows_container", False)
+
         envs = []
         if "env_var" in plugin:
             env_name = plugin["env_var"]
-            envs += ["-e", f"{env_name}={input_type or plugin.get('default_type','fs')}"]
-        # pass JOB_ID to have predictable output filename
-        envs += ["-e", f"JOB_ID={job_id}", "-e", "INPUT_PATH=/data", "-e", "OUTPUT_PATH=/output"]
+            envs += ["-e", f"{env_name}={input_type or plugin.get('default_type', 'fs')}"]
 
-        network          = plugin.get("network", "none")
-        readonly         = plugin.get("readonly", True)
-        extra_tmp        = plugin.get("extra_tmpfs", [])
-        windows_container = plugin.get("windows_container", False)
+        # Always pass the original filename so entrypoints can locate the file
+        # deterministically without relying on `find` ordering.
+        if not src.is_dir():
+            envs += ["-e", f"INPUT_FILENAME={src.name}"]
 
-        # Windows containers use Windows paths and don't support Linux-specific
-        # security/cgroup flags (tmpfs, cap-drop, pids-limit, read-only, security-opt).
+        envs += ["-e", f"JOB_ID={job_id}"]
+
+        # â”€â”€ Base docker run flags â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if windows_container:
-            data_mount   = r"C:\data"
-            output_mount = r"C:\output"
             cmd = [
                 "docker", "run", "--rm",
                 "--network", network,
@@ -81,8 +102,6 @@ class DockerExecutor:
                 f"--cpus={cpus}",
             ]
         else:
-            data_mount   = "/data"
-            output_mount = "/output"
             cmd = [
                 "docker", "run", "--rm",
                 "--network", network,
@@ -98,16 +117,41 @@ class DockerExecutor:
             for t in extra_tmp:
                 cmd += ["--tmpfs", t]
 
-        # Named volumes declared in plugin config (persist between runs, e.g. symbol caches)
+        # Named volumes declared in plugin config (e.g. Volatility symbol cache)
         for vol in plugin.get("plugin_volumes", []):
             cmd += ["-v", vol]
-        # Use _host_path() so DooD volume mounts work on Windows Docker Desktop:
-        # the daemon processes paths relative to the HOST, not the worker container.
-        cmd += envs + [
-            "-v", f"{_host_path(data_vol_src.resolve())}:{data_mount}:ro",
-            "-v", f"{_host_path(job_out.resolve())}:{output_mount}",
-            image
-        ]
+
+        dood = _is_dood() and not windows_container
+
+        if dood:
+            # â”€â”€ DooD mode: share the worker's filesystem directly â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            # --volumes-from inherits all mounts from the worker container
+            # (including .:/app which covers tmp_jobs/).  No host-path
+            # translation needed â€” the child container sees the same paths
+            # as the worker.
+            worker_name = _WORKER_CONTAINER or "fs_worker"
+            cmd += ["--volumes-from", worker_name]
+
+            # Tell entrypoints where to find input and where to write output,
+            # using paths valid inside the shared /app mount.
+            envs += [
+                "-e", f"INPUT_PATH={data_vol_src.resolve()}",
+                "-e", f"OUTPUT_PATH={job_out.resolve()}",
+            ]
+        else:
+            # â”€â”€ Native mode: explicit bind mounts with host-path translation â”€â”€
+            data_mount   = r"C:\data"   if windows_container else "/data"
+            output_mount = r"C:\output" if windows_container else "/output"
+            envs += [
+                "-e", f"INPUT_PATH={data_mount}",
+                "-e", f"OUTPUT_PATH={output_mount}",
+            ]
+            cmd += [
+                "-v", f"{_host_path(data_vol_src.resolve())}:{data_mount}:ro",
+                "-v", f"{_host_path(job_out.resolve())}:{output_mount}",
+            ]
+
+        cmd += envs + [image]
 
         try:
             result = subprocess.run(cmd, check=True, text=True, capture_output=True,
@@ -121,5 +165,4 @@ class DockerExecutor:
         except subprocess.TimeoutExpired as e:
             raise RuntimeError("container timed out") from e
 
-        # return path to output dir (caller will upload to MinIO)
         return str(job_out)
