@@ -68,6 +68,18 @@ class DockerExecutor:
         job_out = job_dir / "output"
         job_out.mkdir(parents=True, exist_ok=True)
 
+        # Unique container name — allows us to kill the container on timeout
+        container_name = f"fsjob-{job_id}"
+
+        # Per-feature timeout overrides the tool-level timeout when defined
+        feature_timeout = None
+        if input_type:
+            for feat in plugin.get("features", []):
+                if feat.get("id") == input_type:
+                    feature_timeout = feat.get("timeout")
+                    break
+        effective_timeout = feature_timeout or timeout or plugin.get("timeout", 600)
+
         # For files: mount the parent directory so the file appears as /data/<name>.
         # For directories: mount the directory itself.
         src = Path(input_path)
@@ -97,6 +109,7 @@ class DockerExecutor:
         if windows_container:
             cmd = [
                 "docker", "run", "--rm",
+                "--name", container_name,
                 "--network", network,
                 f"--memory={memory}",
                 f"--cpus={cpus}",
@@ -104,6 +117,7 @@ class DockerExecutor:
         else:
             cmd = [
                 "docker", "run", "--rm",
+                "--name", container_name,
                 "--network", network,
                 f"--memory={memory}",
                 f"--cpus={cpus}",
@@ -155,7 +169,7 @@ class DockerExecutor:
 
         try:
             result = subprocess.run(cmd, check=True, text=True, capture_output=True,
-                                    timeout=timeout or plugin.get("timeout", 600))
+                                    timeout=effective_timeout)
             if result.stdout:
                 print(result.stdout, end="")
         except subprocess.CalledProcessError as e:
@@ -163,6 +177,11 @@ class DockerExecutor:
                 print(e.stdout, end="")
             raise RuntimeError(f"container failed: {e.stderr}") from e
         except subprocess.TimeoutExpired as e:
-            raise RuntimeError("container timed out") from e
+            # Kill the container — it keeps running even after the docker run
+            # client process is terminated by the subprocess timeout.
+            subprocess.run(["docker", "kill", container_name], capture_output=True)
+            raise RuntimeError(
+                f"container timed out after {effective_timeout}s"
+            ) from e
 
         return str(job_out)

@@ -24,7 +24,7 @@ export function useJob(jobId: string | undefined) {
     refetchInterval: (query) => {
       const status = query.state.data?.status
       return status === 'queued' || status === 'running' || status === 'normalizing'
-        ? 3_000
+        ? 2_000
         : false
     },
   })

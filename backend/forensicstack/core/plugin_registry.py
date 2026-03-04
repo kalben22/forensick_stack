@@ -56,30 +56,37 @@ PLUGIN_REGISTRY = {
                 "label": "Process List",
                 "description": "Liste tous les processus actifs au moment de la capture mémoire (PID, PPID, nom, heure de démarrage).",
                 "accepted_extensions": [".raw", ".dmp", ".vmem", ".mem", ".lime"],
+                # Fast: walks the EPROCESS doubly-linked list — typically 20-60 s
+                "timeout": 120,
             },
             {
                 "id": "windows.cmdline",
                 "label": "Command Lines",
                 "description": "Affiche les arguments de ligne de commande complets pour chaque processus en cours d'exécution.",
                 "accepted_extensions": [".raw", ".dmp", ".vmem", ".mem", ".lime"],
+                "timeout": 150,
             },
             {
                 "id": "windows.netscan",
                 "label": "Network Scan",
                 "description": "Scan des connexions réseau actives et des sockets en écoute (TCP/UDP, adresses IP, ports).",
                 "accepted_extensions": [".raw", ".dmp", ".vmem", ".mem", ".lime"],
+                "timeout": 150,
             },
             {
                 "id": "windows.dlllist",
                 "label": "DLL List",
                 "description": "Liste toutes les DLLs chargées par chaque processus, avec leur chemin et adresse de base.",
                 "accepted_extensions": [".raw", ".dmp", ".vmem", ".mem", ".lime"],
+                # Slower: traverses the VAD tree for every process — allow 3 min
+                "timeout": 180,
             },
             {
                 "id": "windows.malfind",
                 "label": "Malfind",
                 "description": "Détecte les régions mémoire suspectes susceptibles de contenir du code injecté ou du shellcode.",
                 "accepted_extensions": [".raw", ".dmp", ".vmem", ".mem", ".lime"],
+                "timeout": 300,
             },
         ],
     },

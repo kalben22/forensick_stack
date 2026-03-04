@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import {
   ArrowLeft,
@@ -175,6 +175,9 @@ export function ToolDetailPage({ slug }: Props) {
   const [validationError, setValidationError] = useState<string | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const jobStartRef = useRef<number | null>(null)
+  const [elapsed, setElapsed] = useState(0)
+
   const { mutateAsync: directAnalyze, isPending: isAnalyzing } = useDirectAnalyze()
   const { data: jobData } = useJob(jobId ?? undefined)
 
@@ -242,6 +245,27 @@ export function ToolDetailPage({ slug }: Props) {
   const isDone = jobData?.status === 'done' || jobData?.status === 'completed'
   const isFailed = jobData?.status === 'failed'
   const isRunning = jobData?.status === 'queued' || jobData?.status === 'running' || jobData?.status === 'normalizing'
+
+  // Start elapsed counter when a new job is submitted
+  useEffect(() => {
+    if (jobId) {
+      jobStartRef.current = Date.now()
+      setElapsed(0)
+    } else {
+      jobStartRef.current = null
+    }
+  }, [jobId])
+
+  // Tick every second while the job is active
+  useEffect(() => {
+    if (!isRunning) return
+    const id = setInterval(() => {
+      if (jobStartRef.current) {
+        setElapsed(Math.floor((Date.now() - jobStartRef.current) / 1000))
+      }
+    }, 1000)
+    return () => clearInterval(id)
+  }, [isRunning])
 
   const handleReset = () => {
     setFile(null)
@@ -551,11 +575,11 @@ export function ToolDetailPage({ slug }: Props) {
                         <Activity className="size-4 shrink-0 animate-pulse text-forensic-cyan" />
                         <div className="flex flex-col gap-0.5">
                           <p className="text-xs font-mono font-medium text-forensic-cyan">
-                            {jobData?.status === 'queued'      && 'En attente de traitement…'}
-                            {jobData?.status === 'running'     && 'Analyse en cours dans le conteneur…'}
-                            {jobData?.status === 'normalizing' && 'Normalisation des résultats…'}
+                            {jobData?.status === 'queued'      && `En attente de traitement… ${elapsed}s`}
+                            {jobData?.status === 'running'     && `Analyse en cours dans le conteneur… ${elapsed}s`}
+                            {jobData?.status === 'normalizing' && `Normalisation des résultats… ${elapsed}s`}
                           </p>
-                          <p className="text-[10px] font-mono text-muted-foreground">Mise à jour toutes les 3 s</p>
+                          <p className="text-[10px] font-mono text-muted-foreground">Mise à jour toutes les 2 s</p>
                         </div>
                       </div>
                     )}

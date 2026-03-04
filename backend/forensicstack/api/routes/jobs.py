@@ -11,7 +11,7 @@ from forensicstack.core import crud
 from forensicstack.core.auth import get_current_user
 from forensicstack.core.models.user_model import User
 from forensicstack.core.plugin_registry import PLUGIN_REGISTRY
-from forensicstack.api.jobs import submit_job, get_job_status
+from forensicstack.api.jobs import submit_job, get_job_status, cleanup_prev_user_upload, track_user_upload
 from forensicstack.api.schemas import JobSubmitRequest, JobStatusResponse
 
 router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
@@ -85,7 +85,7 @@ async def direct_analyze(
     file: UploadFile = File(...),
     tool: str = Form(...),
     feature: Optional[str] = Form(None),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Upload a file and immediately submit a forensic analysis job.
@@ -104,6 +104,9 @@ async def direct_analyze(
         )
 
     MAX_UPLOAD_BYTES = 5 * 1024 ** 3  # 5 GB
+
+    # If the user has a previous completed/failed upload, free its disk space now.
+    cleanup_prev_user_upload(current_user.id)
 
     # Write the uploaded file to a local temp dir (shared with the worker).
     # Use __file__-based absolute path so it resolves correctly regardless of
@@ -145,6 +148,9 @@ async def direct_analyze(
         input_path=stored_path,
         input_type=feature,
     )
+
+    # Track this upload so the next /direct call for this user can clean it up.
+    track_user_upload(current_user.id, job_id, str(upload_dir))
 
     return {
         "job_id": job_id,

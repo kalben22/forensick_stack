@@ -1,4 +1,5 @@
 import json
+import shutil
 import uuid
 import redis
 import os
@@ -62,3 +63,34 @@ def get_job_status(job_id: str) -> dict:
         result["error"] = data["error"]
 
     return result
+
+
+# ── Upload tracking ────────────────────────────────────────────────────────────
+# When a user submits a new /direct analysis, the previous upload directory for
+# that user is cleaned up if the previous job has already completed or failed.
+# This frees disk space immediately instead of waiting for the stale-cleanup TTL.
+
+_UPLOAD_TRACK_TTL = 4 * 3600  # 4 h — safety net in case the job never completes
+
+
+def track_user_upload(user_id: int, job_id: str, upload_dir: str) -> None:
+    """Record the user's latest upload so it can be cleaned on the next request."""
+    r.set(f"upload_track:{user_id}", f"{job_id}|{upload_dir}", ex=_UPLOAD_TRACK_TTL)
+
+
+def cleanup_prev_user_upload(user_id: int) -> None:
+    """
+    Delete the previous upload directory for this user if its job is done.
+    Safe to call before writing a new upload — only acts on completed/failed jobs.
+    """
+    prev = r.get(f"upload_track:{user_id}")
+    if not prev:
+        return
+    try:
+        prev_job_id, prev_dir = prev.split("|", 1)
+        prev_status = r.hget(f"job:{prev_job_id}", "status")
+        if prev_status in ("completed", "failed"):
+            shutil.rmtree(prev_dir, ignore_errors=True)
+            r.delete(f"upload_track:{user_id}")
+    except Exception:
+        pass
