@@ -38,7 +38,29 @@ BUCKET = "forensic-outputs"
 if not minio_client.bucket_exists(BUCKET):
     minio_client.make_bucket(BUCKET)
 
+def wait_for_input_path(path: str, timeout: float = 10.0, interval: float = 0.25) -> None:
+    """
+    Wait for a file to exist and be fully written by the API before the worker
+    tries to read it. This prevents "file not found" or incomplete read errors
+    if the worker picks up the job before the API finishes writing the file.
 
+    Checks for file existence and stable file size (no growth) within the timeout.
+    Raises TimeoutError if the file isn't ready within the timeout.
+    """
+    import time as _time
+    p = Path(path)
+    deadline = _time.monotonic() + timeout   
+    while _time.monotonic() < deadline:
+        if p.is_dir() and any(p.iterdir()):
+            return
+        if p.is_file() and p.stat().st_size > 0:
+            return
+        _time.sleep(interval)
+    # Final check for stable file size before giving up
+    if p.exists():
+            raise RuntimeError(f"Input file '{path}' exists but is empty after {timeout} seconds.")
+    raise TimeoutError(f"Input file '{path}' not found after {timeout} seconds.")
+    
 def cleanup_old_tmp_jobs(tmp_base: Path, max_age_s: int = _TMP_MAX_AGE_S) -> int:
     """
     Remove stale directories under tmp_base (job output dirs) and under
@@ -159,6 +181,7 @@ def worker_loop():
             if not plugin_conf:
                 raise Exception("Plugin not registered: " + tool)
 
+            wait_for_input_path(input_path, timeout=300.0, interval=10.0)
             # Choose executor: native (direct host subprocess) or Docker container
             if plugin_conf.get("executor") == "native":
                 output_dir = NativeExecutor.run_plugin(tool, input_path, input_type=input_type)
