@@ -77,7 +77,15 @@ export const jobsApi = {
       '/api/v1/jobs/direct',
       form,
       {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 10 * 60 * 1000, // 10 min — memory dumps can be several GB
+        // Remove the default 'application/json' Content-Type so the browser
+        // can set 'multipart/form-data; boundary=...' automatically from FormData
+        transformRequest: [
+          (reqData: FormData, headers: Record<string, string>) => {
+            delete headers['Content-Type']
+            return reqData
+          },
+        ],
         onUploadProgress: (e) =>
           onProgress?.(Math.round((e.loaded * 100) / (e.total ?? 1))),
       },

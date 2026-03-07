@@ -237,8 +237,15 @@ export function ToolDetailPage({ slug }: Props) {
       setJobFilename(res.filename)
       setJobSizeBytes(res.size_bytes)
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-      setValidationError(msg ?? 'Erreur lors de la soumission. Vérifiez que le backend est démarré.')
+      const e = err as { response?: { data?: { detail?: unknown }; status?: number }; message?: string }
+      const detail = e?.response?.data?.detail
+      const status = e?.response?.status
+      const msg = detail
+        ? (Array.isArray(detail)
+            ? detail.map((d: { msg?: string }) => d?.msg ?? JSON.stringify(d)).join(', ')
+            : String(detail))
+        : status ? `HTTP ${status} — ${e?.message}` : (e?.message ?? 'Erreur lors de la soumission. Vérifiez que le backend est démarré.')
+      setValidationError(msg)
     }
   }
 
