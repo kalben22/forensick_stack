@@ -202,6 +202,13 @@ export function ToolDetailPage({ slug }: Props) {
     [selectedFeature],
   )
 
+  const clearFile = useCallback(() => {
+    setFile(null)
+    setJobId(null)
+    setValidationError(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }, [])
+
   const handleFileSelect = (f: File) => {
     setValidationError(null)
     setFile(f)
@@ -275,9 +282,7 @@ export function ToolDetailPage({ slug }: Props) {
   }, [isRunning])
 
   const handleReset = () => {
-    setFile(null)
-    setJobId(null)
-    setValidationError(null)
+    clearFile()
     setUploadProgress(0)
     setJobFilename('')
     setJobSizeBytes(0)
@@ -357,7 +362,7 @@ export function ToolDetailPage({ slug }: Props) {
                 return (
                   <button
                     key={feat.id}
-                    onClick={() => { setSelectedFeature(feat); setFile(null); setJobId(null); setValidationError(null) }}
+                    onClick={() => { setSelectedFeature(feat); clearFile() }}
                     className={`
                       w-full text-left rounded-lg border px-3 py-2.5 transition-all
                       ${isSelected
@@ -462,7 +467,7 @@ export function ToolDetailPage({ slug }: Props) {
                           variant="ghost"
                           size="sm"
                           className="text-xs font-mono text-muted-foreground"
-                          onClick={(e) => { e.stopPropagation(); setFile(null); setJobId(null); setValidationError(null) }}
+                          onClick={(e) => { e.stopPropagation(); clearFile() }}
                         >
                           Changer de fichier
                         </Button>

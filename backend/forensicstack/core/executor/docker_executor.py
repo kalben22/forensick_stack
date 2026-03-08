@@ -92,6 +92,7 @@ class DockerExecutor:
         network  = plugin.get("network", "none")
         readonly = plugin.get("readonly", True)
         extra_tmp         = plugin.get("extra_tmpfs", [])
+        shm_size          = plugin.get("shm_size", "")
         windows_container = plugin.get("windows_container", False)
 
         envs = []
@@ -122,11 +123,13 @@ class DockerExecutor:
                 "--network", network,
                 f"--memory={memory}",
                 f"--cpus={cpus}",
-                "--pids-limit=200",
+                "--pids-limit=512",
                 "--cap-drop=ALL",
                 "--security-opt", "no-new-privileges",
-                "--tmpfs=/tmp:rw,size=64m",
+                "--tmpfs=/tmp:rw,size=128m",
             ]
+            if shm_size:
+                cmd += [f"--shm-size={shm_size}"]
             if readonly:
                 cmd.append("--read-only")
             for t in extra_tmp:

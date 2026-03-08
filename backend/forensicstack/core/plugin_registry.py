@@ -30,7 +30,7 @@ PLUGIN_REGISTRY = {
                 "id": "fs",
                 "label": "Full Android Extraction",
                 "description": "Extraction complète des artefacts Android : SMS, appels, applications, comptes Google, historique Chrome, fichiers multimédia.",
-                "accepted_extensions": [".tar", ".zip", ".ab"],
+                "accepted_extensions": [".tar", ".zip", ".ab", ".dd"],
             },
         ],
     },
@@ -41,6 +41,7 @@ PLUGIN_REGISTRY = {
         "env_var": "VOLATILITY_PLUGIN",
         "memory": "6g",
         "cpus": "4",
+        "shm_size": "512m",   # improves mmap/I/O for large dump scanning
         "timeout": 600,
         # Symbols for common kernels are baked into the image (package dir).
         # network: bridge — Volatility auto-downloads missing PDB ISF files
