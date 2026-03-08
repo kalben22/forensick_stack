@@ -52,3 +52,11 @@ conn.executemany(
 conn.commit()
 conn.close()
 print(f"Pre-built identifier.cache: {len(rows)} entries -> {db_path}")
+
+# Also bake a copy outside /root/.cache so it survives a named-volume mount
+# shadowing that directory.  entrypoint.sh restores from this backup when
+# the volume-mounted cache is empty or missing.
+import shutil
+backup = "/app/identifier.cache.baked"
+shutil.copy2(db_path, backup)
+print(f"Backup copy written to {backup}")
