@@ -4,8 +4,10 @@ Pre-build Volatility3 identifier.cache from ISF filenames.
 Run during Docker image build (after symbols are downloaded) to avoid
 the ~14-minute first-run cost of decompressing all 3014 .json.xz files.
 
-GUIDs are encoded directly in filenames:
-  <pdb_name>-<GUID><AGE>.json.xz  →  identifier = "<pdb_name>!<GUID><AGE>"
+ISF filename format : <pdb_name>-<GUID32><age>.json.xz
+Volatility3 cache identifier format: "<pdb_name>.pdb|<GUID32>|<age>"
+  e.g. ntkrnlmp-2D168F0D37494A9081A75D6ADE46126F2.json.xz
+       → "ntkrnlmp.pdb|2D168F0D37494A9081A75D6ADE46126F|2"
 """
 import sqlite3, os, re, glob, datetime
 
@@ -34,17 +36,22 @@ conn.execute("INSERT INTO database_info VALUES (1)")
 
 now = datetime.datetime.utcnow().isoformat()
 rows = []
-pattern = re.compile(r"^(.+)-([0-9A-Fa-f]+)\.json\.xz$")
+# ISF files are stored as: <SYM_DIR>/windows/<pdb_name>.pdb/<GUID>-<age>.json.xz
+# Volatility3 identifier format: "<pdb_name>.pdb|<GUID>|<age>"
+# Location format:               "file://<full_path>"
+fname_pattern = re.compile(r"^([0-9A-Fa-f]{32})-(\d+)\.json\.xz$")
 
 for xz in glob.glob(os.path.join(SYM_DIR, "**", "*.json.xz"), recursive=True):
     fname = os.path.basename(xz)
-    m = pattern.match(fname)
+    m = fname_pattern.match(fname)
     if not m:
         continue
-    pdb_name = m.group(1)   # e.g. "ntkrnlmp"
-    guid_age  = m.group(2)  # e.g. "A57C10D40BAB…1"
-    identifier = f"{pdb_name}!{guid_age}"
-    rows.append((xz, identifier, "windows", None, 0, 0, 0, 0, True, now))
+    guid     = m.group(1).upper()   # 32 hex chars
+    age      = m.group(2)           # decimal age string
+    pdb_dir  = os.path.basename(os.path.dirname(xz))  # e.g. "ntkrnlmp.pdb"
+    # Volatility3 identifier format: "<pdb_name>.pdb|<GUID>|<age>"
+    identifier = f"{pdb_dir}|{guid}|{age}"
+    rows.append((f"file://{xz}", identifier, "windows", None, 0, 0, 0, 0, True, now))
 
 conn.executemany(
     "INSERT INTO cache VALUES (?,?,?,?,?,?,?,?,?,?)", rows
