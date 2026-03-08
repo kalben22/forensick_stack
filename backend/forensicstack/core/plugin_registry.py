@@ -40,8 +40,8 @@ PLUGIN_REGISTRY = {
         "category": "memory",
         "env_var": "VOLATILITY_PLUGIN",
         "memory": "6g",
-        "cpus": "2",
-        "timeout": 7200,
+        "cpus": "4",
+        "timeout": 600,
         # Symbols for common kernels are baked into the image (package dir).
         # network: bridge — Volatility auto-downloads missing PDB ISF files
         # from msdl.microsoft.com when the baked-in set doesn't match.
@@ -56,37 +56,35 @@ PLUGIN_REGISTRY = {
                 "label": "Process List",
                 "description": "Liste tous les processus actifs au moment de la capture mémoire (PID, PPID, nom, heure de démarrage).",
                 "accepted_extensions": [".raw", ".dmp", ".vmem", ".mem", ".lime"],
-                # Fast: walks the EPROCESS doubly-linked list — typically 20-60 s
-                "timeout": 120,
+                "timeout": 300,
             },
             {
                 "id": "windows.cmdline",
                 "label": "Command Lines",
                 "description": "Affiche les arguments de ligne de commande complets pour chaque processus en cours d'exécution.",
                 "accepted_extensions": [".raw", ".dmp", ".vmem", ".mem", ".lime"],
-                "timeout": 150,
+                "timeout": 300,
             },
             {
                 "id": "windows.netscan",
                 "label": "Network Scan",
                 "description": "Scan des connexions réseau actives et des sockets en écoute (TCP/UDP, adresses IP, ports).",
                 "accepted_extensions": [".raw", ".dmp", ".vmem", ".mem", ".lime"],
-                "timeout": 150,
+                "timeout": 360,
             },
             {
                 "id": "windows.dlllist",
                 "label": "DLL List",
                 "description": "Liste toutes les DLLs chargées par chaque processus, avec leur chemin et adresse de base.",
                 "accepted_extensions": [".raw", ".dmp", ".vmem", ".mem", ".lime"],
-                # Slower: traverses the VAD tree for every process — allow 3 min
-                "timeout": 180,
+                "timeout": 360,
             },
             {
                 "id": "windows.malfind",
                 "label": "Malfind",
                 "description": "Détecte les régions mémoire suspectes susceptibles de contenir du code injecté ou du shellcode.",
                 "accepted_extensions": [".raw", ".dmp", ".vmem", ".mem", ".lime"],
-                "timeout": 300,
+                "timeout": 480,
             },
         ],
     },

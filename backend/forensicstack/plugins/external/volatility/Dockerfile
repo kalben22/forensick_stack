@@ -27,6 +27,14 @@ RUN VOL3_SYM_DIR=$(python3 -c "import volatility3, os; print(os.path.join(os.pat
     rm /tmp/windows.zip && \
     echo "Symbols baked in: $(find $VOL3_SYM_DIR/windows -name '*.json.xz' | wc -l) ISF files at $VOL3_SYM_DIR"
 
+# ── Pre-build identifier.cache from ISF filenames (no decompression needed) ──
+# Without this, Volatility decompresses all 3014 .json.xz files on first run
+# to build the GUID index — costing ~14 min.  We extract GUIDs directly from
+# filenames (format: <pdb>-<GUID><AGE>.json.xz) and insert them into the
+# SQLite cache so first-run analysis takes the same time as subsequent runs.
+COPY build_cache.py /tmp/build_cache.py
+RUN python3 /tmp/build_cache.py && rm /tmp/build_cache.py
+
 # Create output directory
 RUN mkdir -p /output && chmod 0777 /output
 

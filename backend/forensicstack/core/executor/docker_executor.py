@@ -67,6 +67,7 @@ class DockerExecutor:
         job_dir = TMP_BASE / job_id
         job_out = job_dir / "output"
         job_out.mkdir(parents=True, exist_ok=True)
+        os.chmod(str(job_out), 0o777)  # tool containers run as non-root (e.g. analyst/1000)
 
         # Unique container name — allows us to kill the container on timeout
         container_name = f"fsjob-{job_id}"
