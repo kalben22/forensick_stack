@@ -54,6 +54,26 @@ export function useDirectAnalyze() {
   })
 }
 
+export function useReanalyze() {
+  return useMutation({
+    mutationFn: ({ uploadToken, tool, feature }: { uploadToken: string; tool: string; feature?: string }) =>
+      jobsApi.reanalyze(uploadToken, tool, feature),
+  })
+}
+
+export function useCancelJob() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (jobId: string) => jobsApi.cancelJob(jobId),
+    onSuccess: (_, jobId) => {
+      // Immediately update cached status to cancelled
+      qc.setQueryData(['job', jobId], (old: unknown) =>
+        old ? { ...(old as object), status: 'cancelled' } : old
+      )
+    },
+  })
+}
+
 /** Live job updates via Socket.io. Merges into React Query cache. */
 export function useJobSocket(jobId: string | undefined) {
   const socketRef = useRef<Socket | null>(null)

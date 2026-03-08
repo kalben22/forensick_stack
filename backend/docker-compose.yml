@@ -98,7 +98,7 @@ services:
     networks:
       - forensicstack
 
-  # ── Worker (Redis queue consumer) ─────────────────────────────────────────
+  # ── Worker — light tools (aLEAPP, iLEAPP, ExifTool, EZTools) ─────────────
   worker:
     build:
       context: .
@@ -125,17 +125,50 @@ services:
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
-      # WORKER_CONTAINER_NAME tells DockerExecutor which container to pass
-      # to --volumes-from when spawning forensic tool containers (DooD mode).
-      # This eliminates fragile host-path translation on Windows.
       WORKER_CONTAINER_NAME: fs_worker
-      # HOST_BACKEND_DIR is only needed for native-mode fallback (worker not
-      # running in Docker).  Leave empty when using docker-compose.
       HOST_BACKEND_DIR: "${HOST_BACKEND_DIR:-}"
+      JOB_QUEUE: job_queue          # light tools only
     volumes:
       - .:/app:rw
       - tmp_jobs:/app/tmp_jobs
-      - /var/run/docker.sock:/var/run/docker.sock   # worker spawns forensic tool containers
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - forensicstack
+
+  # ── Worker — heavy tools (Volatility — long PDB scan) ─────────────────────
+  worker_heavy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: forensicstack/worker:dev
+    container_name: fs_worker_heavy
+    command: python -u -m forensicstack.worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      WORKER_CONTAINER_NAME: fs_worker_heavy
+      HOST_BACKEND_DIR: "${HOST_BACKEND_DIR:-}"
+      JOB_QUEUE: job_queue_heavy    # Volatility only
+    volumes:
+      - .:/app:rw
+      - tmp_jobs:/app/tmp_jobs
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - forensicstack
 

@@ -37,11 +37,19 @@ export interface DirectAnalyzeResponse {
   size_bytes: number
   tool: string
   feature: string | null
+  upload_token: string       // reuse token — pass to reanalyze() instead of re-uploading
+}
+
+export interface ReanalyzeResponse {
+  job_id: string
+  tool: string
+  feature: string | null
+  upload_token: string
 }
 
 export interface JobStatusResponse {
   job_id: string
-  status: 'queued' | 'running' | 'normalizing' | 'completed' | 'done' | 'failed'
+  status: 'queued' | 'running' | 'normalizing' | 'completed' | 'done' | 'failed' | 'cancelled'
   tool?: string
   artifact_id?: number
   progress?: number
@@ -96,5 +104,40 @@ export const jobsApi = {
   getStatus: async (jobId: string): Promise<JobStatusResponse> => {
     const { data } = await apiClient.get<JobStatusResponse>(`/api/v1/jobs/${jobId}`)
     return data
+  },
+
+  cancelJob: async (jobId: string): Promise<{ cancelled: boolean; reason?: string }> => {
+    const { data } = await apiClient.delete(`/api/v1/jobs/${jobId}`)
+    return data
+  },
+
+  /** Submit a new analysis without re-uploading — reuses the on-disk file via token. */
+  reanalyze: async (
+    uploadToken: string,
+    tool: string,
+    feature: string | undefined,
+  ): Promise<ReanalyzeResponse> => {
+    const form = new FormData()
+    form.append('upload_token', uploadToken)
+    form.append('tool', tool)
+    if (feature) form.append('feature', feature)
+    const { data } = await apiClient.post<ReanalyzeResponse>(
+      '/api/v1/jobs/reanalyze',
+      form,
+      {
+        transformRequest: [
+          (reqData: FormData, headers: Record<string, string>) => {
+            delete headers['Content-Type']
+            return reqData
+          },
+        ],
+      },
+    )
+    return data
+  },
+
+  /** Explicitly delete a cached upload (called when user changes the file). */
+  deleteUpload: async (token: string): Promise<void> => {
+    await apiClient.delete(`/api/v1/jobs/upload/${token}`)
   },
 }

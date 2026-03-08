@@ -11,7 +11,11 @@ from forensicstack.core import crud
 from forensicstack.core.auth import get_current_user
 from forensicstack.core.models.user_model import User
 from forensicstack.core.plugin_registry import PLUGIN_REGISTRY
-from forensicstack.api.jobs import submit_job, get_job_status, cleanup_prev_user_upload, track_user_upload
+from forensicstack.api.jobs import (
+    submit_job, get_job_status, cancel_job,
+    store_upload_token, get_upload_by_token, refresh_upload_token, delete_upload_token,
+    cleanup_prev_user_upload, track_user_upload,
+)
 from forensicstack.api.schemas import JobSubmitRequest, JobStatusResponse
 
 router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
@@ -143,10 +147,15 @@ async def direct_analyze(
     except ValueError:
         stored_path = str(file_path.resolve())
 
+    # Generate a reuse token so subsequent features on this file skip re-upload.
+    upload_token = str(uuid4())
+    store_upload_token(upload_token, stored_path, str(upload_dir))
+
     job_id = submit_job(
         tool=tool,
         input_path=stored_path,
         input_type=feature,
+        keep_upload=True,   # worker must NOT delete — the token owns the dir
     )
 
     # Track this upload so the next /direct call for this user can clean it up.
@@ -158,7 +167,82 @@ async def direct_analyze(
         "size_bytes": written,
         "tool": tool,
         "feature": feature,
+        "upload_token": upload_token,
     }
+
+
+@router.post("/reanalyze", status_code=202)
+async def reanalyze(
+    upload_token: str = Form(...),
+    tool: str = Form(...),
+    feature: Optional[str] = Form(None),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Submit a new analysis job for an already-uploaded file.
+
+    Uses the `upload_token` returned by a previous `/direct` call.
+    No file upload required — the file stays on disk between analyses.
+
+    - **upload_token**: token from the previous `/direct` response
+    - **tool**: tool name (same or different from the original upload)
+    - **feature**: specific feature/plugin to run
+    """
+    if tool not in PLUGIN_REGISTRY:
+        raise HTTPException(status_code=400, detail=f"Unknown tool '{tool}'.")
+
+    upload_info = get_upload_by_token(upload_token)
+    if not upload_info:
+        raise HTTPException(
+            status_code=404,
+            detail="Upload token not found or expired. Please re-upload the file.",
+        )
+
+    # Extend TTL so an active session stays alive
+    refresh_upload_token(upload_token)
+
+    job_id = submit_job(
+        tool=tool,
+        input_path=upload_info["file_path"],
+        input_type=feature,
+        keep_upload=True,
+    )
+
+    return {"job_id": job_id, "tool": tool, "feature": feature, "upload_token": upload_token}
+
+
+@router.delete("/upload/{token}")
+async def delete_upload(
+    token: str,
+    _: User = Depends(get_current_user),
+):
+    """
+    Explicitly release a reusable upload session.
+
+    Deletes the on-disk file and the Redis token.  Call this when the user
+    clicks "Changer de fichier" so disk space is freed immediately.
+    """
+    delete_upload_token(token)
+    return {"deleted": True}
+
+
+@router.delete("/{job_id}")
+async def cancel(
+    job_id: str,
+    _: User = Depends(get_current_user),
+):
+    """
+    Cancel a queued or running job.
+
+    - **queued** jobs are marked cancelled and skipped by the worker.
+    - **running** jobs have their Docker container killed immediately.
+
+    Returns `{"cancelled": true}` on success, or `{"cancelled": false, "reason": "..."}`.
+    """
+    result = cancel_job(job_id)
+    if not result["cancelled"] and result.get("reason") == "not_found":
+        raise HTTPException(status_code=404, detail="Job not found")
+    return result
 
 
 @router.get("/{job_id}", response_model=JobStatusResponse)

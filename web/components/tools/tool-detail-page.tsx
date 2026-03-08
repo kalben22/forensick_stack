@@ -19,6 +19,7 @@ import {
   FileWarning,
   RotateCcw,
   Info,
+  Ban,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -26,9 +27,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useListTools } from '@/lib/hooks/use-jobs'
-import { useDirectAnalyze } from '@/lib/hooks/use-jobs'
-import { useJob } from '@/lib/hooks/use-jobs'
+import { useListTools, useDirectAnalyze, useReanalyze, useJob, useCancelJob } from '@/lib/hooks/use-jobs'
+import { jobsApi } from '@/lib/api/jobs'
 import type { ToolFeature } from '@/lib/api/jobs'
 
 // ── Metadata ──────────────────────────────────────────────────────────────────
@@ -146,6 +146,7 @@ function StatusBadge({ status }: { status: string }) {
     completed:   { label: 'Terminé',    icon: CheckCircle2, cls: 'border-forensic-green/30 text-forensic-green' },
     done:        { label: 'Terminé',    icon: CheckCircle2, cls: 'border-forensic-green/30 text-forensic-green' },
     failed:      { label: 'Échec',      icon: XCircle,      cls: 'border-destructive/30 text-destructive' },
+    cancelled:   { label: 'Annulé',     icon: Ban,          cls: 'border-orange-500/30 text-orange-400' },
   }
   const s = map[status] ?? map.queued
   const Icon = s.icon
@@ -173,12 +174,17 @@ export function ToolDetailPage({ slug }: Props) {
   const [jobFilename, setJobFilename] = useState<string>('')
   const [jobSizeBytes, setJobSizeBytes] = useState<number>(0)
   const [validationError, setValidationError] = useState<string | null>(null)
+  // Reuse token — set after first /direct upload, allows /reanalyze without re-upload
+  const [uploadToken, setUploadToken] = useState<string | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const jobStartRef = useRef<number | null>(null)
   const [elapsed, setElapsed] = useState(0)
 
-  const { mutateAsync: directAnalyze, isPending: isAnalyzing } = useDirectAnalyze()
+  const { mutateAsync: directAnalyze, isPending: isUploading } = useDirectAnalyze()
+  const { mutateAsync: reanalyze, isPending: isResubmitting } = useReanalyze()
+  const isAnalyzing = isUploading || isResubmitting
+  const { mutateAsync: cancelJob } = useCancelJob()
   const { data: jobData } = useJob(jobId ?? undefined)
 
   const Icon = CATEGORY_ICON[tool?.category ?? ''] ?? Cpu
@@ -203,11 +209,40 @@ export function ToolDetailPage({ slug }: Props) {
   )
 
   const clearFile = useCallback(() => {
+    // Free the cached upload on the server when user explicitly changes the file
+    if (uploadToken) {
+      jobsApi.deleteUpload(uploadToken).catch(() => {/* best-effort */})
+      setUploadToken(null)
+    }
     setFile(null)
     setJobId(null)
     setValidationError(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
-  }, [])
+  }, [uploadToken])
+
+  // Switch feature but keep the current file (avoids re-upload of large dumps).
+  // Re-validates the file for the new feature — clears it only if incompatible.
+  const switchFeature = useCallback(
+    (feat: ToolFeature) => {
+      setSelectedFeature(feat)
+      setJobId(null)
+      setValidationError(null)
+      // Keep file if it's compatible with the new feature
+      if (file) {
+        const exts = feat.accepted_extensions
+        if (!exts.includes('*')) {
+          const ext = '.' + file.name.split('.').pop()?.toLowerCase()
+          if (!exts.includes(ext)) {
+            // Incompatible: clear so user isn't confused
+            setFile(null)
+            if (fileInputRef.current) fileInputRef.current.value = ''
+          }
+        }
+        // else: wildcard — file is always compatible, keep it
+      }
+    },
+    [file],
+  )
 
   const handleFileSelect = (f: File) => {
     setValidationError(null)
@@ -234,15 +269,23 @@ export function ToolDetailPage({ slug }: Props) {
 
     setUploadProgress(0)
     try {
-      const res = await directAnalyze({
-        file,
-        tool: slug,
-        feature: selectedFeature.id,
-        onProgress: setUploadProgress,
-      })
-      setJobId(res.job_id)
-      setJobFilename(res.filename)
-      setJobSizeBytes(res.size_bytes)
+      if (uploadToken) {
+        // File already on disk — submit without re-uploading
+        const res = await reanalyze({ uploadToken, tool: slug, feature: selectedFeature.id })
+        setJobId(res.job_id)
+      } else {
+        // First time — full upload
+        const res = await directAnalyze({
+          file,
+          tool: slug,
+          feature: selectedFeature.id,
+          onProgress: setUploadProgress,
+        })
+        setJobId(res.job_id)
+        setJobFilename(res.filename)
+        setJobSizeBytes(res.size_bytes)
+        setUploadToken(res.upload_token)
+      }
     } catch (err: unknown) {
       const e = err as { response?: { data?: { detail?: unknown }; status?: number }; message?: string }
       const detail = e?.response?.data?.detail
@@ -258,6 +301,7 @@ export function ToolDetailPage({ slug }: Props) {
 
   const isDone = jobData?.status === 'done' || jobData?.status === 'completed'
   const isFailed = jobData?.status === 'failed'
+  const isCancelled = jobData?.status === 'cancelled'
   const isRunning = jobData?.status === 'queued' || jobData?.status === 'running' || jobData?.status === 'normalizing'
 
   // Start elapsed counter when a new job is submitted
@@ -282,7 +326,9 @@ export function ToolDetailPage({ slug }: Props) {
   }, [isRunning])
 
   const handleReset = () => {
-    clearFile()
+    // Keep the file so user can immediately re-run without re-uploading
+    setJobId(null)
+    setValidationError(null)
     setUploadProgress(0)
     setJobFilename('')
     setJobSizeBytes(0)
@@ -362,7 +408,7 @@ export function ToolDetailPage({ slug }: Props) {
                 return (
                   <button
                     key={feat.id}
-                    onClick={() => { setSelectedFeature(feat); clearFile() }}
+                    onClick={() => switchFeature(feat)}
                     className={`
                       w-full text-left rounded-lg border px-3 py-2.5 transition-all
                       ${isSelected
@@ -463,6 +509,11 @@ export function ToolDetailPage({ slug }: Props) {
                           <p className="font-mono text-sm font-medium text-forensic-green">{file.name}</p>
                           <p className="text-xs text-muted-foreground font-mono mt-0.5">{formatBytes(file.size)}</p>
                         </div>
+                        {!jobId && (
+                          <Badge variant="outline" className="font-mono text-[10px] border-forensic-green/30 text-forensic-green/70">
+                            Prêt pour l&apos;analyse
+                          </Badge>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -498,8 +549,8 @@ export function ToolDetailPage({ slug }: Props) {
                     </p>
                   )}
 
-                  {/* Upload progress */}
-                  {isAnalyzing && uploadProgress < 100 && (
+                  {/* Upload progress — only shown on first upload, not on reanalyze */}
+                  {isUploading && uploadProgress < 100 && (
                     <div className="flex flex-col gap-1.5">
                       <div className="flex justify-between text-[10px] font-mono text-muted-foreground">
                         <span>Upload en cours…</span>
@@ -519,12 +570,12 @@ export function ToolDetailPage({ slug }: Props) {
                     {isAnalyzing ? (
                       <>
                         <Activity className="mr-2 size-4 animate-pulse" />
-                        {uploadProgress < 100 ? 'Upload…' : 'Analyse en cours…'}
+                        {isResubmitting ? 'Envoi en cours…' : uploadProgress < 100 ? 'Upload…' : 'Analyse en cours…'}
                       </>
                     ) : (
                       <>
                         <Play className="mr-2 size-4" />
-                        Lancer l&apos;analyse
+                        {uploadToken ? 'Relancer l\'analyse' : 'Lancer l\'analyse'}
                       </>
                     )}
                   </Button>
@@ -546,7 +597,18 @@ export function ToolDetailPage({ slug }: Props) {
                       </div>
                       <div className="flex items-center gap-2">
                         {jobData?.status && <StatusBadge status={jobData.status} />}
-                        {(isDone || isFailed) && (
+                        {isRunning && (
+                          <Button
+                            onClick={() => jobId && cancelJob(jobId)}
+                            variant="ghost"
+                            size="sm"
+                            className="font-mono text-[10px] h-7 px-2 text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 gap-1"
+                          >
+                            <Ban className="size-3" />
+                            Annuler
+                          </Button>
+                        )}
+                        {(isDone || isFailed || isCancelled) && (
                           <Button
                             onClick={handleReset}
                             variant="ghost"
@@ -593,6 +655,16 @@ export function ToolDetailPage({ slug }: Props) {
                           </p>
                           <p className="text-[10px] font-mono text-muted-foreground">Mise à jour toutes les 2 s</p>
                         </div>
+                      </div>
+                    )}
+
+                    {/* Cancelled */}
+                    {isCancelled && (
+                      <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-3 flex items-center gap-2">
+                        <Ban className="size-3.5 shrink-0 text-orange-400" />
+                        <p className="text-xs font-mono text-orange-400">
+                          Analyse annulée. Le fichier est toujours chargé — tu peux relancer immédiatement.
+                        </p>
                       </div>
                     )}
 

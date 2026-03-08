@@ -3,7 +3,7 @@
 # INPUT_PATH / OUTPUT_PATH injected by DockerExecutor
 INPUT="${INPUT_PATH:-/data}"
 OUTPUT="${OUTPUT_PATH:-/output}"
-SCRIPT="/app/iLEAPP/ileapp.py"
+SCRIPT="/opt/iLEAPP/ileapp.py"
 
 TYPE="${ILEAPP_TYPE:-fs}"
 
