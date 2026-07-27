@@ -10,9 +10,16 @@ PLUGIN_REGISTRY = {
         "features": [
             {
                 "id": "fs",
-                "label": "Full iOS Extraction",
-                "description": "Extraction complète des artefacts iOS : messages, contacts, appels, géolocalisation, applications installées, historique Safari.",
+                "label": "Full iOS Extraction (archive/répertoire)",
+                "description": "Extraction complète des artefacts iOS depuis une archive ou un répertoire extrait : messages, contacts, appels, géolocalisation, applications installées, historique Safari.",
                 "accepted_extensions": [".tar", ".zip", ".tar.gz"],
+            },
+            {
+                "id": "img",
+                "label": "Full iOS Extraction (image disque)",
+                "description": "Extraction complète des artefacts iOS depuis une image disque brute (.dd, .img, .dmg) — pour les acquisitions physiques complètes.",
+                "accepted_extensions": [".dd", ".img", ".dmg"],
+                "timeout": 7200,
             },
         ],
     },
@@ -28,9 +35,16 @@ PLUGIN_REGISTRY = {
         "features": [
             {
                 "id": "fs",
-                "label": "Full Android Extraction",
-                "description": "Extraction complète des artefacts Android : SMS, appels, applications, comptes Google, historique Chrome, fichiers multimédia.",
-                "accepted_extensions": [".tar", ".zip", ".ab", ".dd"],
+                "label": "Full Android Extraction (archive/répertoire)",
+                "description": "Extraction complète des artefacts Android depuis une archive ou un répertoire extrait : SMS, appels, applications, comptes Google, historique Chrome, fichiers multimédia.",
+                "accepted_extensions": [".tar", ".zip", ".ab"],
+            },
+            {
+                "id": "img",
+                "label": "Full Android Extraction (image disque)",
+                "description": "Extraction complète des artefacts Android depuis une image disque brute (.dd, .img, .e01) — idéal pour les challenges forensiques type HackTheBox.",
+                "accepted_extensions": [".dd", ".img", ".e01"],
+                "timeout": 7200,
             },
         ],
     },

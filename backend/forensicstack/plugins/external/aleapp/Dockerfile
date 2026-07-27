@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     liblzma-dev \
     libbz2-dev \
+    sleuthkit \
     && rm -rf /var/lib/apt/lists/*
 
 # Install under /opt so --volumes-from /app mount does not shadow it

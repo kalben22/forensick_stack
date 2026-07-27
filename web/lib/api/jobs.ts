@@ -85,7 +85,7 @@ export const jobsApi = {
       '/api/v1/jobs/direct',
       form,
       {
-        timeout: 10 * 60 * 1000, // 10 min — memory dumps can be several GB
+        timeout: 30 * 60 * 1000, // 30 min — memory/disk dumps can be several GB
         // Remove the default 'application/json' Content-Type so the browser
         // can set 'multipart/form-data; boundary=...' automatically from FormData
         transformRequest: [

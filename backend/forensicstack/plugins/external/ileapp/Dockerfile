@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y \
     libxslt1-dev \
     python3-dev \
     ca-certificates \
+    sleuthkit \
     && rm -rf /var/lib/apt/lists/*
 
 # Cloner iLEAPP
