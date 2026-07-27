@@ -1,0 +1,40 @@
+id: aleapp
+name: ALEAPP
+version: "3.2"
+category: mobile_android
+description: >-
+  Android Logs Events And Protobuf Parser. Extracts SMS, calls, application
+  data, Google accounts and Chrome history from an Android extraction.
+homepage: https://github.com/abrignoni/ALEAPP
+license: MIT
+
+runtime:
+  kind: docker
+  image: forensicstack/aleapp:0.1
+  network: none
+  readonly: true
+  user: "1000:1000"
+  memory: 4g
+  cpus: "2"
+  pids_limit: 512
+  timeout: 3600
+
+normalizer: forensicstack.core.normalizers.aleapp_normalizer:ALEAPPNormalizer
+
+accepts:
+  kinds: [android_backup, filesystem_archive, apk]
+  extensions: [".tar", ".zip", ".ab"]
+  min_size: 1KiB
+  max_size: 64GiB
+
+features:
+  - id: fs
+    label: Full Android Extraction
+    description: >-
+      Complete pass: SMS, calls, applications, Google accounts, Chrome
+      history, media files.
+    timeout: 3600
+    emits: [sms, call, contact, browser_history, chat_message, file, user_account]
+    auto: true
+    auto_priority: 10
+    os_hint: android

@@ -10,6 +10,18 @@ Strategy:
     overrides automatically.
 """
 import os
+
+# ── 0. Secrets must exist before ANY forensicstack import ────────────────────
+# The application now refuses to start without them rather than falling back to
+# constants that were committed to git (SECRET_KEY had a public default, so any
+# deployment missing a .env signed forgeable tokens). Tests therefore have to
+# provide throwaway values explicitly — which is the point: no silent default.
+os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production-0123456789abcdef")
+os.environ.setdefault("POSTGRES_PASSWORD", "test-postgres-password")
+os.environ.setdefault("MINIO_ACCESS_KEY", "test-minio-access-key")
+os.environ.setdefault("MINIO_SECRET_KEY", "test-minio-secret-key")
+os.environ.setdefault("REDIS_PASSWORD", "")
+
 import pytest
 from unittest.mock import MagicMock
 from sqlalchemy import create_engine

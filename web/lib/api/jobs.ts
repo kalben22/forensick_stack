@@ -78,6 +78,9 @@ export const jobsApi = {
       form,
       {
         headers: { 'Content-Type': 'multipart/form-data' },
+        // Override the client's 30s default: evidence files run to 5 GB here, so any upload
+        // on a normal connection would be aborted mid-transfer by the global timeout.
+        timeout: 0,
         onUploadProgress: (e) =>
           onProgress?.(Math.round((e.loaded * 100) / (e.total ?? 1))),
       },

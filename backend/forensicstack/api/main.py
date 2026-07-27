@@ -4,7 +4,21 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer
 
-from forensicstack.api.routes import cases, analysis, auth, artifacts, jobs, search
+import os
+
+from forensicstack.api.routes import (
+    analyze, cases, auth, artifacts, jobs, search,
+)
+
+# NOTE: `routes.analysis` (/api/v1/analysis/*) is deliberately NOT imported.
+# That surface is dead: it dispatches with Celery `.delay()`, but no Celery
+# worker exists in docker-compose (the `worker` service runs the Redis-stream
+# consumer), its tools are absent from requirements.txt, and the tasks hand a
+# MinIO object key to code that expects a local filesystem path. Every call
+# returned a task_id that stayed PENDING forever.
+# Worse, importing it hard-fails the whole API when celery is not installed.
+# The replacement is /api/v1/analyze/*. Delete routes/analysis.py and
+# core/tasks.py once you have confirmed nothing external depends on them.
 
 
 @asynccontextmanager
@@ -45,12 +59,25 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# `allow_origins=["*"]` together with `allow_credentials=True` is an invalid
+# combination that Starlette silently degrades and browsers reject for
+# credentialed requests -- and it let any origin drive the API with a stolen
+# token. Origins are now explicit and environment-driven.
+_origins = [
+    o.strip()
+    for o in os.getenv(
+        "CORS_ALLOW_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
+    ).split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
+    max_age=600,
 )
 
 # ── Routers ────────────────────────────────────────────────────────────────────
@@ -58,8 +85,8 @@ app.add_middleware(
 app.include_router(auth.router)          # /auth/*
 app.include_router(cases.router)         # /api/v1/cases/*
 app.include_router(artifacts.router)     # /api/v1/cases/{id}/artifacts/*
-app.include_router(analysis.router)      # /api/v1/analysis/*
 app.include_router(jobs.router)          # /api/v1/jobs/*
+app.include_router(analyze.router)       # /api/v1/analyze/*  (auto-triage + routing)
 app.include_router(search.router)        # /api/v1/search/*
 
 

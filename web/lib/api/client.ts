@@ -18,11 +18,22 @@ apiClient.interceptors.request.use((config) => {
   return config
 })
 
+// Endpoints where a 401 means "these credentials are wrong", not "your session expired".
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/register']
+
+function isAuthEndpoint(url: string | undefined): boolean {
+  if (!url) return false
+  return AUTH_ENDPOINTS.some((path) => url.includes(path))
+}
+
 // On 401 — clear auth and redirect to login
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Skip the redirect for login/register: a 401 there is a bad-credentials response the
+    // form needs to display. Redirecting would unmount the page before setError() renders,
+    // so the user would see a silent bounce back to /login with no explanation.
+    if (error.response?.status === 401 && !isAuthEndpoint(error.config?.url)) {
       useAuthStore.getState().logout()
       if (typeof window !== 'undefined') {
         window.location.href = '/login'

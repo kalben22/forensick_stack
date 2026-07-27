@@ -1,0 +1,43 @@
+id: triage
+name: Triage Scanner
+version: "1.0.0"
+category: triage
+description: >-
+  First-pass scanner for an artifact of any type: classified strings (URLs,
+  IPs, credentials, paths, registry keys), embedded file signatures, block
+  entropy profile and CTF flag candidates.
+
+runtime:
+  kind: docker
+  image: forensicstack/triage:1.0
+  network: none
+  readonly: true
+  user: "1000:1000"
+  memory: 2g
+  cpus: "1"
+  pids_limit: 64
+  timeout: 1800
+
+normalizer: forensicstack.plugins.external.triage.normalizer:TriageNormalizer
+
+# No `kinds`: this is the generic path. It is what runs when identification
+# comes back UNKNOWN, so the platform is never left with nothing to say.
+accepts:
+  max_size: 32GiB
+
+features:
+  - id: scan
+    label: Triage Scan
+    description: >-
+      Classified strings, embedded signatures, entropy profile and flag
+      candidates. Cheap enough to run on every upload.
+    timeout: 1800
+    emits:
+      - string_hit
+      - embedded_file
+      - flag_candidate
+      - artifact_identity
+    auto: true
+    # Priority 1: this runs before any specialised tool, so its output is
+    # already on screen while a long Volatility pass is still going.
+    auto_priority: 1

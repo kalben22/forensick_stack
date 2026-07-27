@@ -1,4 +1,18 @@
 # ForensicStack - Documentation Étape 1
+
+> ⚠️ **AVERTISSEMENT — DOCUMENT HISTORIQUE, NE PAS UTILISER COMME RÉFÉRENCE DE CONFIGURATION**
+>
+> Ce document est un instantané du jalon de **février 2026**. Il décrit l'état du projet
+> à cette date uniquement et **n'est plus à jour** : l'architecture, les variables
+> d'environnement, les ports et les procédures d'installation ont évolué depuis.
+>
+> Il est conservé à titre d'archive. Pour toute installation ou configuration, référez-vous
+> au `README.md` et aux scripts de `scripts/`, qui font seuls autorité.
+>
+> Les mots de passe figurant dans ce document ont été remplacés par le marqueur
+> `<generated-by-setup>` : les secrets réels sont générés par le script d'installation
+> et stockés dans un fichier `.env` local, jamais versionné.
+
 ## Installation et Configuration Initiale
 
 > **Date :** 23 février 2026  
@@ -164,7 +178,7 @@ H:\forensick_stack\
 ```bash
 # Database
 POSTGRES_USER=forensicstack
-POSTGRES_PASSWORD=Pass123456
+POSTGRES_PASSWORD=<generated-by-setup>
 POSTGRES_DB=forensicstack
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5433
@@ -176,7 +190,7 @@ REDIS_PORT=6379
 
 # MinIO
 MINIO_ROOT_USER=minioadmin
-MINIO_ROOT_PASSWORD=Minio123456
+MINIO_ROOT_PASSWORD=<generated-by-setup>
 MINIO_ENDPOINT=localhost:9000
 
 # API
@@ -288,7 +302,7 @@ docker exec -it forensick_stack-redis-1 redis-cli
 
 **Credentials :**
 - User : minioadmin
-- Password : Minio123456
+- Password : <generated-by-setup>
 
 ### 6. ChromaDB
 
