@@ -19,6 +19,38 @@
 # =============================================================================
 set -euo pipefail
 
+# ---------------------------------------------------------------------------
+# Ensure identifier.cache is populated (named volume may shadow baked copy)
+# ---------------------------------------------------------------------------
+CACHE_FILE="/root/.cache/volatility3/identifier.cache"
+BAKED_COPY="/app/identifier.cache.baked"
+
+_cache_entries() {
+    python3 -c "
+import sqlite3, os
+db = '$CACHE_FILE'
+if not os.path.exists(db):
+    print(0)
+else:
+    try:
+        print(sqlite3.connect(db).execute('SELECT COUNT(*) FROM cache').fetchone()[0])
+    except Exception:
+        print(0)
+" 2>/dev/null || echo 0
+}
+
+if [[ -f "$BAKED_COPY" ]]; then
+    entries=$(_cache_entries)
+    if [[ "$entries" -lt 100 ]]; then
+        echo "[volatility] identifier.cache empty ($entries entries) — restoring baked copy..."
+        mkdir -p "$(dirname "$CACHE_FILE")"
+        cp "$BAKED_COPY" "$CACHE_FILE"
+        echo "[volatility] identifier.cache restored"
+    else
+        echo "[volatility] identifier.cache OK ($entries entries)"
+    fi
+fi
+
 # INPUT_PATH / OUTPUT_PATH are injected by DockerExecutor:
 #   - DooD mode  : absolute paths inside the shared /app volume
 #   - Native mode: /data and /output (bind mount targets)

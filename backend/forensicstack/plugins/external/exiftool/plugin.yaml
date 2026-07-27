@@ -1,0 +1,39 @@
+id: exiftool
+name: ExifTool
+version: "12.76"
+category: metadata
+description: >-
+  Reads embedded metadata from virtually any file format: EXIF, IPTC, XMP,
+  ID3, PDF info, Office properties, and container structure.
+homepage: https://exiftool.org
+license: Artistic-1.0
+
+runtime:
+  kind: docker
+  image: forensicstack/exiftool:0.1
+  network: none
+  readonly: true
+  user: "1000:1000"
+  memory: 1g
+  cpus: "1"
+  pids_limit: 128
+  timeout: 600
+
+normalizer: forensicstack.core.normalizers.exiftool_normalizer:ExiftoolNormalizer
+
+# No `kinds` filter: ExifTool genuinely accepts anything, which makes it part
+# of the generic triage path for unidentified artifacts.
+accepts:
+  extensions: []
+  max_size: 8GiB
+
+features:
+  - id: metadata
+    label: Extract Metadata
+    description: >-
+      All embedded metadata, including GPS coordinates, device make/model,
+      creation and modification timestamps, and software fingerprints.
+    timeout: 600
+    emits: [exif, file_metadata, geolocation]
+    auto: true
+    auto_priority: 30

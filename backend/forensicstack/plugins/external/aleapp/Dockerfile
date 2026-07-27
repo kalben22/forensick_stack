@@ -1,6 +1,5 @@
 FROM python:3.11-slim
 
-WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
     git \
@@ -14,11 +13,13 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     liblzma-dev \
     libbz2-dev \
+    sleuthkit \
     && rm -rf /var/lib/apt/lists/*
 
-RUN git clone --depth 1 https://github.com/abrignoni/ALEAPP.git
+# Install under /opt so --volumes-from /app mount does not shadow it
+RUN git clone --depth 1 https://github.com/abrignoni/ALEAPP.git /opt/ALEAPP
 
-WORKDIR /app/ALEAPP
+WORKDIR /opt/ALEAPP
 
 RUN pip install --no-cache-dir -r requirements.txt
 

@@ -123,7 +123,7 @@ print(count)
 done
 
 # =============================================================================
-step "5/8 — Forensic tool Docker images"
+step "5/8 — Forensic tool Docker images + Volatility3 symbol cache"
 # =============================================================================
 
 IMAGES=("forensicstack/ileapp:0.1" "forensicstack/aleapp:0.1" "forensicstack/exiftool:0.1" "forensicstack/volatility:0.1")
@@ -141,6 +141,24 @@ else
   info "Building forensic tool images (first build may take 5–15 minutes)..."
   chmod +x scripts/build-tools.sh
   bash scripts/build-tools.sh
+fi
+
+# ── Volatility3 symbol cache ────────────────────────────────────────────────────
+# Check whether the named volume already has ISF symbol files.
+# If yes: skip the ~350 MB download.  If no: seed it automatically.
+VOL_COUNT=$(docker run --rm \
+  -v forensicstack_vol3_symbols:/vol alpine \
+  sh -c "find /vol/symbols/windows -name '*.json.xz' 2>/dev/null | wc -l" \
+  2>/dev/null || echo "0")
+VOL_COUNT="${VOL_COUNT//[^0-9]/}"   # strip whitespace / newlines
+
+if [[ "${VOL_COUNT:-0}" -gt 100 ]]; then
+  success "Volatility3 symbol cache already populated (${VOL_COUNT} ISF files) — skipping"
+else
+  info "Seeding Volatility3 symbol cache (~350 MB, one-time download)..."
+  info "This pre-populates the cache volume so memory analysis works offline."
+  chmod +x "$REPO_ROOT/scripts/seed-vol3-symbols.sh"
+  bash "$REPO_ROOT/scripts/seed-vol3-symbols.sh"
 fi
 
 # =============================================================================

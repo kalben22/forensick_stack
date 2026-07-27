@@ -1,0 +1,89 @@
+# =============================================================================
+# ForensicStack backend — tooling configuration
+# =============================================================================
+# Config only. There is deliberately NO [build-system] / [project] table:
+# the backend is run from a checkout (see scripts/setup.sh), not pip-installed,
+# so declaring it a package would be misleading.
+#
+# Tools configured here (both are pinned in requirements.txt):
+#   ruff  — linter + import sorter
+#   black — formatter
+# Keep line-length identical in both, or they will fight each other.
+# =============================================================================
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["."]
+
+extend-exclude = [
+    "alembic/versions",   # generated migration scripts
+    "venv",
+    ".venv",
+    "tmp_jobs",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes — undefined names, unused imports
+    "I",    # isort — import ordering
+    "UP",   # pyupgrade — modernise for the py311 target
+    "B",    # flake8-bugbear — likely bugs (mutable defaults, etc.)
+    "SIM",  # flake8-simplify — redundant constructs
+    "S",    # flake8-bandit — SECURITY; this is a forensics tool that shells
+            # out to Docker and parses untrusted evidence, so subprocess
+            # misuse, weak hashes and hardcoded secrets must be caught.
+]
+
+ignore = [
+    "E501",    # line length is enforced by black, not by the linter
+    "B008",    # FastAPI's Depends()/Query() in defaults is the documented idiom
+    "S603",    # subprocess call — the runners invoke `docker` deliberately;
+               # arguments are built as a list, never via a shell string
+    "S607",    # partial executable path — `docker` is resolved from PATH
+    "SIM108",  # ternary-instead-of-if hurts readability in the parsers
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests legitimately use assert, and may hardcode throwaway credentials.
+"tests/**/*.py" = [
+    "S101",  # assert is the point of pytest
+    "S105",  # hardcoded password string (test fixtures)
+    "S106",  # hardcoded password argument (test fixtures)
+    "S311",  # pseudo-random generators are fine for test data
+]
+# Alembic's generated scaffolding does not follow the project's import rules.
+"alembic/env.py" = ["E402", "F401"]
+
+[tool.ruff.lint.flake8-bandit]
+# Flag `except Exception: pass` as well as bare `except:` — swallowing errors
+# silently in an evidence-processing pipeline hides corrupted results.
+check-typed-exception = true
+
+[tool.ruff.lint.isort]
+known-first-party = ["forensicstack"]
+combine-as-imports = true
+
+[tool.ruff.lint.mccabe]
+max-complexity = 12
+
+[tool.ruff.format]
+# Ruff's formatter is not used (black is), but keep the settings aligned so
+# that `ruff format --check` never contradicts black if someone runs it.
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.black]
+target-version = ["py311"]
+line-length = 100
+extend-exclude = '''
+/(
+    alembic/versions
+  | venv
+  | \.venv
+  | tmp_jobs
+)/
+'''

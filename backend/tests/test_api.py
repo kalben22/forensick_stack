@@ -72,7 +72,12 @@ class TestAuth:
 
     def test_me_unauthenticated(self, client):
         resp = client.get("/auth/me")
-        assert resp.status_code == 403   # HTTPBearer returns 403 when no credentials
+        # 401 + WWW-Authenticate is the RFC-correct answer for *missing*
+        # credentials (403 means "authenticated but not allowed"). FastAPI
+        # historically returned 403 here and later fixed it, so this assertion
+        # accepts both -- and the drift is a reminder that requirements.txt is
+        # unpinned, so the resolved FastAPI version changes between builds.
+        assert resp.status_code in (401, 403)
 
     def test_me_invalid_token(self, client):
         resp = client.get("/auth/me", headers={"Authorization": "Bearer invalid.jwt.token"})
@@ -125,7 +130,7 @@ class TestCases:
 
     def test_cases_require_auth(self, client):
         resp = client.get("/api/v1/cases/")
-        assert resp.status_code == 403
+        assert resp.status_code in (401, 403)   # see note in test_me_unauthenticated
 
 
 # ═══════════════════════════════════════════════════════════

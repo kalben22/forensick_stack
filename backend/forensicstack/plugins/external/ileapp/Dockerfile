@@ -1,6 +1,5 @@
 FROM python:3.11-slim
 
-WORKDIR /app
 
 # 🔧 INSTALLER LES OUTILS DE BUILD (CRITIQUE!)
 RUN apt-get update && apt-get install -y \
@@ -21,12 +20,14 @@ RUN apt-get update && apt-get install -y \
     libxslt1-dev \
     python3-dev \
     ca-certificates \
+    sleuthkit \
     && rm -rf /var/lib/apt/lists/*
 
 # Cloner iLEAPP
-RUN git clone --depth 1 https://github.com/abrignoni/iLEAPP.git
+# Install under /opt so --volumes-from /app mount does not shadow it
+RUN git clone --depth 1 https://github.com/abrignoni/iLEAPP.git /opt/iLEAPP
 
-WORKDIR /app/iLEAPP
+WORKDIR /opt/iLEAPP
 
 # Installer les dépendances
 RUN pip install --no-cache-dir -r requirements.txt

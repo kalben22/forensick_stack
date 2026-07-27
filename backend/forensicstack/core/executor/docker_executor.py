@@ -58,17 +58,20 @@ def _host_path(container_path: Path) -> str:
 
 class DockerExecutor:
     @staticmethod
-    def run_plugin(tool_name: str, input_path: str, input_type: str|None = None, timeout: int|None = None):
+    def run_plugin(tool_name: str, input_path: str, input_type: str|None = None, timeout: int|None = None, job_id: str|None = None):
         if tool_name not in PLUGIN_REGISTRY:
             raise ValueError("Unknown plugin: "+tool_name)
         plugin = PLUGIN_REGISTRY[tool_name]
 
-        job_id = str(uuid.uuid4())
+        # Use the worker's job_id so the container can be killed by job_id on cancel
+        if not job_id:
+            job_id = str(uuid.uuid4())
         job_dir = TMP_BASE / job_id
         job_out = job_dir / "output"
         job_out.mkdir(parents=True, exist_ok=True)
+        os.chmod(str(job_out), 0o777)  # tool containers run as non-root (e.g. analyst/1000)
 
-        # Unique container name — allows us to kill the container on timeout
+        # Unique container name — allows us to kill the container on timeout / cancel
         container_name = f"fsjob-{job_id}"
 
         # Per-feature timeout overrides the tool-level timeout when defined
@@ -91,6 +94,7 @@ class DockerExecutor:
         network  = plugin.get("network", "none")
         readonly = plugin.get("readonly", True)
         extra_tmp         = plugin.get("extra_tmpfs", [])
+        shm_size          = plugin.get("shm_size", "")
         windows_container = plugin.get("windows_container", False)
 
         envs = []
@@ -121,11 +125,13 @@ class DockerExecutor:
                 "--network", network,
                 f"--memory={memory}",
                 f"--cpus={cpus}",
-                "--pids-limit=200",
+                "--pids-limit=512",
                 "--cap-drop=ALL",
                 "--security-opt", "no-new-privileges",
-                "--tmpfs=/tmp:rw,size=64m",
+                "--tmpfs=/tmp:rw,size=128m",
             ]
+            if shm_size:
+                cmd += [f"--shm-size={shm_size}"]
             if readonly:
                 cmd.append("--read-only")
             for t in extra_tmp:

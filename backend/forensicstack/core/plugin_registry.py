@@ -10,9 +10,16 @@ PLUGIN_REGISTRY = {
         "features": [
             {
                 "id": "fs",
-                "label": "Full iOS Extraction",
-                "description": "Extraction complète des artefacts iOS : messages, contacts, appels, géolocalisation, applications installées, historique Safari.",
+                "label": "Full iOS Extraction (archive/répertoire)",
+                "description": "Extraction complète des artefacts iOS depuis une archive ou un répertoire extrait : messages, contacts, appels, géolocalisation, applications installées, historique Safari.",
                 "accepted_extensions": [".tar", ".zip", ".tar.gz"],
+            },
+            {
+                "id": "img",
+                "label": "Full iOS Extraction (image disque)",
+                "description": "Extraction complète des artefacts iOS depuis une image disque brute (.dd, .img, .dmg) — pour les acquisitions physiques complètes.",
+                "accepted_extensions": [".dd", ".img", ".dmg"],
+                "timeout": 7200,
             },
         ],
     },
@@ -28,9 +35,16 @@ PLUGIN_REGISTRY = {
         "features": [
             {
                 "id": "fs",
-                "label": "Full Android Extraction",
-                "description": "Extraction complète des artefacts Android : SMS, appels, applications, comptes Google, historique Chrome, fichiers multimédia.",
+                "label": "Full Android Extraction (archive/répertoire)",
+                "description": "Extraction complète des artefacts Android depuis une archive ou un répertoire extrait : SMS, appels, applications, comptes Google, historique Chrome, fichiers multimédia.",
                 "accepted_extensions": [".tar", ".zip", ".ab"],
+            },
+            {
+                "id": "img",
+                "label": "Full Android Extraction (image disque)",
+                "description": "Extraction complète des artefacts Android depuis une image disque brute (.dd, .img, .e01) — idéal pour les challenges forensiques type HackTheBox.",
+                "accepted_extensions": [".dd", ".img", ".e01"],
+                "timeout": 7200,
             },
         ],
     },
@@ -40,8 +54,9 @@ PLUGIN_REGISTRY = {
         "category": "memory",
         "env_var": "VOLATILITY_PLUGIN",
         "memory": "6g",
-        "cpus": "2",
-        "timeout": 7200,
+        "cpus": "4",
+        "shm_size": "512m",   # improves mmap/I/O for large dump scanning
+        "timeout": 600,
         # Symbols for common kernels are baked into the image (package dir).
         # network: bridge — Volatility auto-downloads missing PDB ISF files
         # from msdl.microsoft.com when the baked-in set doesn't match.
@@ -56,37 +71,35 @@ PLUGIN_REGISTRY = {
                 "label": "Process List",
                 "description": "Liste tous les processus actifs au moment de la capture mémoire (PID, PPID, nom, heure de démarrage).",
                 "accepted_extensions": [".raw", ".dmp", ".vmem", ".mem", ".lime"],
-                # Fast: walks the EPROCESS doubly-linked list — typically 20-60 s
-                "timeout": 120,
+                "timeout": 600,
             },
             {
                 "id": "windows.cmdline",
                 "label": "Command Lines",
                 "description": "Affiche les arguments de ligne de commande complets pour chaque processus en cours d'exécution.",
                 "accepted_extensions": [".raw", ".dmp", ".vmem", ".mem", ".lime"],
-                "timeout": 150,
+                "timeout": 600,
             },
             {
                 "id": "windows.netscan",
                 "label": "Network Scan",
                 "description": "Scan des connexions réseau actives et des sockets en écoute (TCP/UDP, adresses IP, ports).",
                 "accepted_extensions": [".raw", ".dmp", ".vmem", ".mem", ".lime"],
-                "timeout": 150,
+                "timeout": 900,
             },
             {
                 "id": "windows.dlllist",
                 "label": "DLL List",
                 "description": "Liste toutes les DLLs chargées par chaque processus, avec leur chemin et adresse de base.",
                 "accepted_extensions": [".raw", ".dmp", ".vmem", ".mem", ".lime"],
-                # Slower: traverses the VAD tree for every process — allow 3 min
-                "timeout": 180,
+                "timeout": 900,
             },
             {
                 "id": "windows.malfind",
                 "label": "Malfind",
                 "description": "Détecte les régions mémoire suspectes susceptibles de contenir du code injecté ou du shellcode.",
                 "accepted_extensions": [".raw", ".dmp", ".vmem", ".mem", ".lime"],
-                "timeout": 300,
+                "timeout": 1200,
             },
         ],
     },

@@ -37,11 +37,19 @@ export interface DirectAnalyzeResponse {
   size_bytes: number
   tool: string
   feature: string | null
+  upload_token: string       // reuse token — pass to reanalyze() instead of re-uploading
+}
+
+export interface ReanalyzeResponse {
+  job_id: string
+  tool: string
+  feature: string | null
+  upload_token: string
 }
 
 export interface JobStatusResponse {
   job_id: string
-  status: 'queued' | 'running' | 'normalizing' | 'completed' | 'done' | 'failed'
+  status: 'queued' | 'running' | 'normalizing' | 'completed' | 'done' | 'failed' | 'cancelled'
   tool?: string
   artifact_id?: number
   progress?: number
@@ -77,7 +85,18 @@ export const jobsApi = {
       '/api/v1/jobs/direct',
       form,
       {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        // No timeout: evidence files run to several GB, so the client's 30s default would
+        // abort the upload mid-transfer on a normal connection.
+        timeout: 0,
+        // Remove the default 'application/json' Content-Type so the browser sets
+        // 'multipart/form-data; boundary=...' itself. Forcing the header manually omits the
+        // boundary parameter, which makes the server unable to parse the multipart body.
+        transformRequest: [
+          (reqData: FormData, headers: Record<string, string>) => {
+            delete headers['Content-Type']
+            return reqData
+          },
+        ],
         onUploadProgress: (e) =>
           onProgress?.(Math.round((e.loaded * 100) / (e.total ?? 1))),
       },
@@ -88,5 +107,40 @@ export const jobsApi = {
   getStatus: async (jobId: string): Promise<JobStatusResponse> => {
     const { data } = await apiClient.get<JobStatusResponse>(`/api/v1/jobs/${jobId}`)
     return data
+  },
+
+  cancelJob: async (jobId: string): Promise<{ cancelled: boolean; reason?: string }> => {
+    const { data } = await apiClient.delete(`/api/v1/jobs/${jobId}`)
+    return data
+  },
+
+  /** Submit a new analysis without re-uploading — reuses the on-disk file via token. */
+  reanalyze: async (
+    uploadToken: string,
+    tool: string,
+    feature: string | undefined,
+  ): Promise<ReanalyzeResponse> => {
+    const form = new FormData()
+    form.append('upload_token', uploadToken)
+    form.append('tool', tool)
+    if (feature) form.append('feature', feature)
+    const { data } = await apiClient.post<ReanalyzeResponse>(
+      '/api/v1/jobs/reanalyze',
+      form,
+      {
+        transformRequest: [
+          (reqData: FormData, headers: Record<string, string>) => {
+            delete headers['Content-Type']
+            return reqData
+          },
+        ],
+      },
+    )
+    return data
+  },
+
+  /** Explicitly delete a cached upload (called when user changes the file). */
+  deleteUpload: async (token: string): Promise<void> => {
+    await apiClient.delete(`/api/v1/jobs/upload/${token}`)
   },
 }

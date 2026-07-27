@@ -32,25 +32,34 @@ import {
 import { useCases } from "@/lib/hooks/use-cases"
 import { useUploadArtifact } from "@/lib/hooks/use-artifacts"
 import { useListTools } from "@/lib/hooks/use-jobs"
-import { validateArtifactFile, type ArtifactType } from "@/lib/api/artifacts"
-import { useToast } from "@/components/ui/use-toast"
+import { validateArtifactFile, getFileExtension, type ArtifactType } from "@/lib/api/artifacts"
+import { formatBytes } from "@/lib/utils"
+// Must be the SAME module as the one <Toaster /> subscribes to: use-toast keeps its
+// listener/state at module scope, so a duplicate copy would be a second, unrendered store.
+import { useToast } from "@/hooks/use-toast"
 
+// Keys MUST be lowercase: lookups go through getFileExtension(), which normalizes case so
+// that `DISK.E01` and `NTUSER.DAT` resolve the same as their lowercase counterparts. With
+// mixed-case keys (".E01", ".DAT") the real-world uppercase filenames matched nothing and
+// the Analyze button stayed disabled with no explanation.
 const FILE_TYPE_MAP: Record<string, { label: string; icon: React.ElementType; artifactType: ArtifactType; color: string }> = {
   ".raw":    { label: "Memory Dump",      icon: Cpu,       artifactType: "memory_dump",    color: "text-forensic-cyan" },
   ".mem":    { label: "Memory Dump",      icon: Cpu,       artifactType: "memory_dump",    color: "text-forensic-cyan" },
   ".vmem":   { label: "Memory Dump",      icon: Cpu,       artifactType: "memory_dump",    color: "text-forensic-cyan" },
-  ".E01":    { label: "Disk Image",       icon: HardDrive, artifactType: "disk_image",     color: "text-forensic-amber" },
+  ".e01":    { label: "Disk Image",       icon: HardDrive, artifactType: "disk_image",     color: "text-forensic-amber" },
   ".dd":     { label: "Disk Image (RAW)", icon: HardDrive, artifactType: "disk_image",     color: "text-forensic-amber" },
   ".tar.gz": { label: "Mobile Backup",   icon: Smartphone, artifactType: "mobile_backup", color: "text-forensic-green" },
   ".ab":     { label: "Android Backup",  icon: Smartphone, artifactType: "mobile_backup", color: "text-forensic-green" },
   ".pcap":   { label: "Network Capture", icon: Network,   artifactType: "pcap",           color: "text-forensic-red" },
   ".pcapng": { label: "Network Capture", icon: Network,   artifactType: "pcap",           color: "text-forensic-red" },
   ".evtx":   { label: "Event Log",       icon: FileCode,  artifactType: "evtx",           color: "text-forensic-violet" },
-  ".DAT":    { label: "Registry Hive",   icon: FileCode,  artifactType: "registry",       color: "text-forensic-violet" },
+  ".dat":    { label: "Registry Hive",   icon: FileCode,  artifactType: "registry",       color: "text-forensic-violet" },
 }
 
+// Uses the shared compound-aware extractor so `backup.tar.gz` resolves to ".tar.gz"
+// instead of ".gz" — the naive last-dot split never matched any mobile backup.
 function detectType(filename: string) {
-  return Object.entries(FILE_TYPE_MAP).find(([ext]) => filename.endsWith(ext))?.[1] ?? null
+  return FILE_TYPE_MAP[getFileExtension(filename)] ?? null
 }
 
 export function UploadContent() {
@@ -88,6 +97,17 @@ export function UploadContent() {
 
   const handleBrowse = () => fileInputRef.current?.click()
 
+  // The drop zone is a <div> (Card), so it inherits none of a real <button>'s keyboard
+  // behavior — without this, the only way to upload is a mouse. Space must preventDefault()
+  // or the browser scrolls the page down instead of opening the file picker.
+  const handleDropZoneKeyDown = (e: React.KeyboardEvent) => {
+    if (selectedFile) return
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault()
+      handleBrowse()
+    }
+  }
+
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) handleFileSelect(file)
@@ -104,9 +124,12 @@ export function UploadContent() {
 
     try {
       await upload({ file: selectedFile, artifactType: detectedInfo.artifactType })
+      // This flow only uploads the artifact — nothing submits an analysis job. The old copy
+      // claimed it was "queued for analysis", so users waited for results that never came.
+      // TODO(follow-up): wire jobsApi.submit() here and restore the queued wording.
       toast({
         title: "Upload successful",
-        description: `${selectedFile.name} uploaded and queued for analysis.`,
+        description: `${selectedFile.name} uploaded to the case. Start an analysis from the Tools page.`,
       })
       setSelectedFile(null)
       setDetectedInfo(null)
@@ -130,13 +153,16 @@ export function UploadContent() {
         {/* Upload Zone */}
         <div className="lg:col-span-2 flex flex-col gap-6">
 
-          {/* Hidden real file input */}
+          {/* Visually hidden file input. `sr-only` instead of `hidden` because display:none
+              removes the input from the tab order entirely, leaving keyboard and screen
+              reader users with no way to reach the file picker at all. */}
           <input
             ref={fileInputRef}
             type="file"
-            className="hidden"
+            aria-label="Evidence file to upload"
+            className="sr-only"
             onChange={handleFileInputChange}
-            accept=".raw,.mem,.vmem,.dmp,.E01,.dd,.img,.tar.gz,.ab,.pcap,.pcapng,.evtx,.DAT,.reg"
+            accept=".raw,.mem,.vmem,.dmp,.e01,.dd,.img,.tar.gz,.ab,.pcap,.pcapng,.evtx,.dat,.reg"
           />
 
           <Card
@@ -151,6 +177,12 @@ export function UploadContent() {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={!selectedFile ? handleBrowse : undefined}
+            // Exposed as a button only while it is actually actionable — announcing a
+            // focusable "button" that does nothing once a file is picked is its own bug.
+            role={!selectedFile ? "button" : undefined}
+            tabIndex={!selectedFile ? 0 : undefined}
+            aria-label={!selectedFile ? "Choose an evidence file to upload" : undefined}
+            onKeyDown={!selectedFile ? handleDropZoneKeyDown : undefined}
           >
             <CardContent className="flex flex-col items-center justify-center py-16">
               {selectedFile ? (
@@ -159,8 +191,10 @@ export function UploadContent() {
                     <CheckCircle2 className="size-8 text-forensic-green" />
                   </div>
                   <p className="text-lg font-mono font-semibold">{selectedFile.name}</p>
+                  {/* Hardcoding GB rendered every sub-gigabyte file as "0.00 GB" —
+                      formatBytes picks the unit that actually fits. */}
                   <p className="text-sm text-muted-foreground font-mono">
-                    {(selectedFile.size / 1e9).toFixed(2)} GB
+                    {formatBytes(selectedFile.size)}
                   </p>
                   {detectedInfo && autoDetect && (
                     <div className="mt-4 flex items-center gap-3 rounded-lg border border-forensic-cyan/20 bg-forensic-cyan/5 px-4 py-3">
@@ -228,7 +262,8 @@ export function UploadContent() {
               disabled={!canAnalyze}
             >
               <Zap className="size-4" />
-              {!caseIdNum ? "Select a case first…" : "Upload & Analyze"}
+              {/* Label matches what the handler actually does (upload only) — see handleAnalyze. */}
+              {!caseIdNum ? "Select a case first…" : "Upload Evidence"}
             </Button>
           )}
         </div>

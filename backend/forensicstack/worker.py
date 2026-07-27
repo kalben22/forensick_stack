@@ -26,6 +26,11 @@ REDIS_HOST = os.getenv("REDIS_HOST", "redis")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 REDIS_PASS = os.getenv("REDIS_PASSWORD", "")
 
+# Which Redis queue this worker instance pulls from.
+# "job_queue"       → light tools (aLEAPP, iLEAPP, ExifTool, EZTools)
+# "job_queue_heavy" → heavy tools (Volatility)
+JOB_QUEUE = os.getenv("JOB_QUEUE", "job_queue")
+
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
 MINIO_ACCESS = os.getenv("MINIO_ACCESS_KEY")
 MINIO_SECRET = os.getenv("MINIO_SECRET_KEY")
@@ -128,12 +133,12 @@ def upload_dir_to_minio(prefix: str, dir_path: str):
 
 
 def worker_loop():
-    print("Worker started, waiting for jobs...")
+    print(f"Worker started, pulling from queue: {JOB_QUEUE}")
     _cleanup_counter = 0
     _TMP_BASE = Path(__file__).resolve().parent.parent / "tmp_jobs"
 
     while True:
-        job = r.brpop("job_queue", timeout=5)
+        job = r.brpop(JOB_QUEUE, timeout=5)
         if not job:
             time.sleep(1)
             # Run temp cleanup roughly every ~50 idle cycles (â‰ˆ 5 min)
@@ -149,6 +154,10 @@ def worker_loop():
         tool = job_data["tool"]
         input_path = job_data["input_path"]
         input_type = job_data.get("input_type")
+        # When True the upload dir is owned by an upload_token and must NOT be
+        # deleted by the worker — the token TTL or an explicit DELETE /upload/{token}
+        # call will clean it up when the user is done reusing the file.
+        keep_upload = job_data.get("keep_upload", False)
 
         # Resolve input_path to an absolute path usable by this worker process.
         #
@@ -164,15 +173,24 @@ def worker_loop():
         #   - /app/ prefix on Windows     â†’ translate to local backend_dir
         _backend_dir = Path(__file__).resolve().parent.parent
         if not Path(input_path).is_absolute() and not _WIN_ABS_RE.match(input_path):
-            # Relative path (the new normal) â€” resolve against backend dir
+            # Relative path (the new normal) â€" resolve against backend dir
             input_path = str(_backend_dir / input_path)
         elif platform.system() == "Windows" and input_path.startswith("/app/"):
             # Legacy: Docker-style path received by a native Windows worker
             input_path = str(_backend_dir / input_path[5:])
-        # else: already absolute on the current OS â€” use as-is
+        # else: already absolute on the current OS â€" use as-is
 
-        # set running
-        r.hset(f"job:{job_id}", mapping={"status": "running"})
+        # Check if job was cancelled while queued
+        current_status = r.hget(f"job:{job_id}", "status")
+        if current_status == "cancelled":
+            print(f"Job {job_id} was cancelled before processing — skipping")
+            if not keep_upload:
+                cleanup_upload_dir(input_path, _TMP_BASE)
+            continue
+
+        # set running — also store container name so the cancel endpoint can kill it
+        container_name = f"fsjob-{job_id}"
+        r.hset(f"job:{job_id}", mapping={"status": "running", "container": container_name})
 
         try:
             plugin_conf = PLUGIN_REGISTRY.get(tool)
@@ -184,7 +202,7 @@ def worker_loop():
             if plugin_conf.get("executor") == "native":
                 output_dir = NativeExecutor.run_plugin(tool, input_path, input_type=input_type)
             else:
-                output_dir = DockerExecutor.run_plugin(tool, input_path, input_type=input_type)
+                output_dir = DockerExecutor.run_plugin(tool, input_path, input_type=input_type, job_id=job_id)
 
             # normalize
             findings = normalize(tool, output_dir)  # returns list of Finding dataclasses
@@ -209,15 +227,18 @@ def worker_loop():
             except Exception:
                 pass
 
-            # Cleanup upload dir (the input file) â€” freed immediately after use
-            cleanup_upload_dir(input_path, _TMP_BASE)
+            # Cleanup upload dir only if the file is not reused across features.
+            # When keep_upload=True the upload_token owns the dir; it will be
+            # deleted when the user clicks "Changer de fichier" or after TTL.
+            if not keep_upload:
+                cleanup_upload_dir(input_path, _TMP_BASE)
 
             print(f"Job {job_id} done")
         except Exception as e:
             r.hset(f"job:{job_id}", mapping={"status": "failed", "error": str(e)})
             print("Error processing job", e)
-            # Cleanup upload dir even on failure to avoid disk leaks
-            cleanup_upload_dir(input_path, _TMP_BASE)
+            if not keep_upload:
+                cleanup_upload_dir(input_path, _TMP_BASE)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,41 @@
+id: ileapp
+name: iLEAPP
+version: "1.18"
+category: mobile_ios
+description: >-
+  iOS Logs, Events And Plists Parser. Extracts messages, call history,
+  contacts, locations, installed apps and browser history from an iOS
+  filesystem extraction or backup.
+homepage: https://github.com/abrignoni/iLEAPP
+license: MIT
+
+runtime:
+  kind: docker
+  image: forensicstack/ileapp:0.1
+  network: none
+  readonly: true
+  user: "1000:1000"
+  memory: 4g
+  cpus: "2"
+  pids_limit: 512
+  timeout: 3600
+
+normalizer: forensicstack.core.normalizers.ileapp_normalizer:ILEAPPNormalizer
+
+accepts:
+  kinds: [ios_backup, ipa]
+  extensions: [".tar", ".zip", ".tar.gz"]
+  min_size: 1KiB
+  max_size: 64GiB
+
+features:
+  - id: fs
+    label: Full iOS Extraction
+    description: >-
+      Complete pass over the extraction: messages, contacts, calls,
+      geolocation, installed applications, Safari history.
+    timeout: 3600
+    emits: [sms, call, contact, geolocation, browser_history, chat_message, file]
+    auto: true
+    auto_priority: 10
+    os_hint: ios

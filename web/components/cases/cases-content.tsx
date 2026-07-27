@@ -36,7 +36,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useCases, useCreateCase } from "@/lib/hooks/use-cases"
 import { mockCases, type CaseStatus } from "@/lib/mock-data"
-import { useToast } from "@/components/ui/use-toast"
+// Must be the SAME module as the one <Toaster /> subscribes to: use-toast keeps its
+// listener/state at module scope, so a duplicate copy would be a second, unrendered store.
+import { useToast } from "@/hooks/use-toast"
 import type { CaseResponse } from "@/lib/api/cases"
 
 function StatusBadge({ status }: { status: string }) {

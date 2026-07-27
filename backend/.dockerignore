@@ -1,0 +1,75 @@
+# =============================================================================
+# ForensicStack backend — Docker build context exclusions
+# =============================================================================
+# The Dockerfile does `COPY . .`, so anything not excluded here is baked into
+# an image layer permanently — including secrets, which remain recoverable from
+# the layer even if a later step deletes them. Keep this list tight.
+# =============================================================================
+
+# ── Secrets ──────────────────────────────────────────────────────────────────
+.env
+*.env
+.env.local
+.env.*.local
+!.env.example
+*.key
+*.pem
+secrets/
+credentials.json
+
+# ── VCS ──────────────────────────────────────────────────────────────────────
+.git
+.gitignore
+.gitattributes
+.dockerignore
+
+# ── Python virtualenvs (host-built, wrong ABI inside the image) ──────────────
+venv/
+.venv/
+ENV/
+env/
+forensic/
+
+# ── Python bytecode / build artifacts ────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# ── Test & lint caches ───────────────────────────────────────────────────────
+tests/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ── Runtime job scratch (mounted as a volume at /app/tmp_jobs) ───────────────
+tmp_jobs/
+test_output/
+*.log
+
+# ── Large third-party data (fetched at setup, not baked in) ──────────────────
+forensicstack/rules/yara/community/
+
+# ── Editor backups ───────────────────────────────────────────────────────────
+*.backup
+*.bak
+*.orig
+*.swp
+.vscode/
+.idea/
+
+# ── OS cruft ─────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Docs / compose (not needed at runtime) ───────────────────────────────────
+docker-compose.yml
+Dockerfile
+*.md
