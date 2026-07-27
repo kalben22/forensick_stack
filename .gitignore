@@ -27,9 +27,19 @@ htmlcov/
 *.db
 
 # Environment files (contain secrets)
+# NB: `.env` and `*.env` do NOT match `.env.local` — it must be listed explicitly.
 .env
 *.env
+.env.local
+.env.*.local
 !.env.example
+
+# Editor / tooling backups (never commit — may contain stale secrets)
+*.backup
+*.bak
+
+# Build caches
+*.tsbuildinfo
 
 # IDE / OS
 .vscode/

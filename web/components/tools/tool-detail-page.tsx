@@ -480,8 +480,16 @@ export function ToolDetailPage({ slug }: Props) {
                   <div
                     role="button"
                     tabIndex={0}
+                    aria-label="Choisir un fichier à analyser"
                     onClick={() => fileInputRef.current?.click()}
-                    onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
+                    // Space must activate a role="button" too, and must preventDefault() or
+                    // the browser scrolls the page instead of opening the file picker.
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        fileInputRef.current?.click()
+                      }
+                    }}
                     onDragOver={onDragOver}
                     onDragLeave={onDragLeave}
                     onDrop={onDrop}

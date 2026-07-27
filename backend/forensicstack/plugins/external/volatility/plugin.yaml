@@ -1,0 +1,157 @@
+id: volatility
+name: Volatility 3
+version: "2.7.0"
+category: memory
+description: >-
+  Memory forensics framework. Reconstructs processes, network connections,
+  loaded modules and injected code from a raw memory image.
+homepage: https://github.com/volatilityfoundation/volatility3
+license: VSL-1.0
+
+runtime:
+  kind: docker
+  image: forensicstack/volatility:0.1
+  # Symbols for common kernels are baked into the image at build time and the
+  # rest are seeded into the named volume below by scripts/seed-vol3-symbols.
+  # The previous manifest used `network: bridge` so Volatility could fetch PDBs
+  # from msdl.microsoft.com at runtime — which gave the highest-privilege tool
+  # in the stack (6 GB RAM, 2 h timeout, writable rootfs) unrestricted outbound
+  # network and reachability to every other container on the default bridge.
+  network: none
+  readonly: true
+  user: "1000:1000"
+  memory: 6g
+  cpus: "2"
+  pids_limit: 512
+  timeout: 7200
+  volumes:
+    - forensicstack_vol3_symbols:/home/vol/.cache/volatility3
+
+feature_env: VOLATILITY_PLUGIN
+normalizer: forensicstack.core.normalizers.volatility_normalizer:VolatilityNormalizer
+
+accepts:
+  kinds:
+    - memory_dump
+    - crash_dump
+    - hibernation_file
+    - process_dump
+  extensions: [".raw", ".dmp", ".vmem", ".mem", ".lime", ".core", ".vmss"]
+  min_size: 1MiB
+  max_size: 64GiB
+
+features:
+  # ---- stage 1: always run these, they are fast and orient everything else --
+  - id: windows.info
+    label: Image Information
+    description: >-
+      Kernel version, build, architecture and the profile Volatility resolved.
+      Run first: if this fails, every other Windows plugin will fail too, and
+      it costs seconds instead of minutes.
+    timeout: 180
+    emits: [artifact_identity]
+    auto: true
+    auto_priority: 5
+    os_hint: windows
+
+  - id: windows.pslist
+    label: Process List
+    description: >-
+      Active processes at capture time, walking the EPROCESS doubly-linked list
+      (PID, PPID, name, start time).
+    timeout: 300
+    emits: [process]
+    auto: true
+    auto_priority: 10
+    os_hint: windows
+    requires: [windows.info]
+
+  - id: windows.pstree
+    label: Process Tree
+    description: Parent/child view of the process list — spots orphaned or
+      masquerading processes at a glance.
+    timeout: 300
+    emits: [process]
+    auto: true
+    auto_priority: 15
+    os_hint: windows
+    requires: [windows.info]
+
+  - id: windows.netscan
+    label: Network Connections
+    description: TCP/UDP endpoints and connections recovered from pool memory.
+    timeout: 600
+    emits: [network_connection]
+    auto: true
+    auto_priority: 20
+    os_hint: windows
+    requires: [windows.info]
+
+  - id: windows.cmdline
+    label: Process Command Lines
+    description: Full command line of every process — the single highest-signal
+      artifact for spotting living-off-the-land execution.
+    timeout: 300
+    emits: [process, execution_evidence]
+    auto: true
+    auto_priority: 25
+    os_hint: windows
+    requires: [windows.info]
+
+  - id: windows.malfind
+    label: Injected Code
+    description: Memory regions whose protection and content suggest injected or
+      unpacked code.
+    timeout: 1800
+    emits: [process, signature_match]
+    auto: true
+    auto_priority: 40
+    os_hint: windows
+    requires: [windows.info]
+
+  # ---- manual: expensive or narrow ---------------------------------------- #
+  - id: windows.dlllist
+    label: Loaded DLLs
+    description: Modules loaded by each process.
+    timeout: 900
+    emits: [file]
+    os_hint: windows
+
+  - id: windows.filescan
+    label: File Objects
+    description: File objects present in memory. Slow on large images.
+    timeout: 3600
+    emits: [file]
+    os_hint: windows
+
+  - id: windows.registry.hivelist
+    label: Registry Hives
+    description: Registry hives mapped in memory.
+    timeout: 600
+    emits: [registry_key]
+    os_hint: windows
+
+  - id: windows.svcscan
+    label: Services
+    description: Windows services recovered from memory.
+    timeout: 900
+    emits: [service]
+    os_hint: windows
+
+  - id: linux.pslist
+    label: Process List (Linux)
+    description: Active processes in a Linux memory image.
+    timeout: 600
+    emits: [process]
+    auto: true
+    auto_priority: 10
+    os_hint: linux
+
+  - id: linux.bash
+    label: Bash History (Linux)
+    description: Recovered bash command history.
+    timeout: 600
+    emits: [execution_evidence]
+    auto: true
+    auto_priority: 20
+    os_hint: linux

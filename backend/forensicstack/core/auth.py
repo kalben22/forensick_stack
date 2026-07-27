@@ -7,21 +7,26 @@ Usage in FastAPI routes:
     async def my_route(current_user: User = Depends(get_current_user)):
         ...
 """
+import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import bcrypt as _bcrypt
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
-import os
 
-from forensicstack.core.database import get_db
+from forensicstack.core.database import get_db, require_env
 from forensicstack.core.models.user_model import User
 
 # ── Configuration ────────────────────────────────────────────────────────────
-SECRET_KEY = os.getenv("SECRET_KEY", "changeme-use-a-real-secret-in-production")
+# No fallback value: the previous default ("changeme-use-a-real-secret-in-
+# production") is a public constant in this repository, so any deployment
+# started without a .env signed JWTs with a key an attacker already has —
+# tokens for any user, including role=admin, could be forged offline.
+# 32 chars is the minimum for HS256 to have full-strength key material.
+SECRET_KEY = require_env("SECRET_KEY", min_length=32)
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
 
@@ -109,3 +114,17 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
             detail="Admin privileges required",
         )
     return current_user
+
+
+def owner_scope(user: User) -> Optional[int]:
+    """
+    Return the owner_id that queries must be restricted to for `user`.
+
+    Analysts get their own id; admins get None, meaning "no ownership filter".
+    Centralising the rule here prevents the failure the audit found: each route
+    open-coding (or, in practice, forgetting) its own authorisation check, so
+    that any registered account could read and delete every case in the
+    platform. A route that forgets to call this now has no owner_id to pass and
+    fails loudly instead of silently returning everyone's evidence.
+    """
+    return None if user.role == "admin" else user.id

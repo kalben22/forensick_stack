@@ -85,9 +85,12 @@ export const jobsApi = {
       '/api/v1/jobs/direct',
       form,
       {
-        timeout: 30 * 60 * 1000, // 30 min — memory/disk dumps can be several GB
-        // Remove the default 'application/json' Content-Type so the browser
-        // can set 'multipart/form-data; boundary=...' automatically from FormData
+        // No timeout: evidence files run to several GB, so the client's 30s default would
+        // abort the upload mid-transfer on a normal connection.
+        timeout: 0,
+        // Remove the default 'application/json' Content-Type so the browser sets
+        // 'multipart/form-data; boundary=...' itself. Forcing the header manually omits the
+        // boundary parameter, which makes the server unable to parse the multipart body.
         transformRequest: [
           (reqData: FormData, headers: Record<string, string>) => {
             delete headers['Content-Type']

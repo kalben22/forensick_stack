@@ -1,0 +1,61 @@
+# =============================================================================
+# ForensicStack web — Docker build context exclusions
+# =============================================================================
+# Anything not excluded here ends up in an image layer permanently. Dependencies
+# and the Next.js build must be produced inside the image, not copied from the
+# host, so node_modules/ and .next/ are excluded on purpose.
+# =============================================================================
+
+# ── Secrets ──────────────────────────────────────────────────────────────────
+.env
+*.env
+.env.local
+.env.*.local
+!.env.example
+
+# ── VCS ──────────────────────────────────────────────────────────────────────
+.git
+.gitignore
+.gitattributes
+.dockerignore
+
+# ── Dependencies (reinstalled inside the image from the lockfile) ────────────
+node_modules/
+.pnpm-store/
+.yarn/
+
+# ── Next.js build output & caches (rebuilt inside the image) ─────────────────
+.next/
+out/
+build/
+dist/
+.turbo/
+.swc/
+*.tsbuildinfo
+
+# ── Test & coverage ──────────────────────────────────────────────────────────
+coverage/
+.nyc_output/
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── Editor backups ───────────────────────────────────────────────────────────
+*.backup
+*.bak
+*.orig
+*.swp
+.vscode/
+.idea/
+
+# ── OS cruft ─────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Docs ─────────────────────────────────────────────────────────────────────
+Dockerfile
+*.md
