@@ -20,6 +20,7 @@ import {
   FileSearch,
   Smartphone,
   Cpu,
+  Radar,
 } from 'lucide-react'
 import { useLogout } from '@/lib/hooks/use-auth'
 import { useAuthStore } from '@/lib/stores/auth-store'
@@ -153,6 +154,14 @@ export function AppSidebar() {
                   <Link href="/">
                     <LayoutDashboard />
                     <span>Dashboard</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === '/analyze'} tooltip="Triage automatique">
+                  <Link href="/analyze">
+                    <Radar />
+                    <span>Triage auto</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

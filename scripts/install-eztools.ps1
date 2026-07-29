@@ -1,5 +1,5 @@
 # =============================================================================
-# ForensicStack — Install EZ Tools on the Windows host (run ONCE)
+# ForensicStack - Install EZ Tools on the Windows host (run ONCE)
 #
 # Uses Eric Zimmerman's official Get-ZimmermanTools.ps1 script to download
 # and install all tools to C:\EZTools (or the path set in EZTOOLS_DIR).

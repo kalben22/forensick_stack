@@ -29,7 +29,7 @@ RUFF     := $(shell [ -x $(CURDIR)/backend/venv/bin/ruff   ] && echo $(CURDIR)/b
 BLACK    := $(shell [ -x $(CURDIR)/backend/venv/bin/black  ] && echo $(CURDIR)/backend/venv/bin/black  || echo black)
 
 # Every target is a task name, not a file to be built.
-.PHONY: help setup up down logs test lint fmt build-tools clean
+.PHONY: help setup up down logs test lint fmt build-tools worker-auto clean
 
 # `make` with no arguments prints the menu rather than running something.
 .DEFAULT_GOAL := help
@@ -80,6 +80,11 @@ fmt:
 build-tools:
 	@chmod +x scripts/build-tools.sh
 	@./scripts/build-tools.sh
+
+## worker-auto: run the autonomous /analyze triage worker on the host (needs the stack up)
+worker-auto:
+	@chmod +x scripts/run-auto-worker.sh
+	@./scripts/run-auto-worker.sh $(CONCURRENCY)
 
 ## clean: remove caches and build artifacts (does NOT touch Docker volumes)
 clean:
