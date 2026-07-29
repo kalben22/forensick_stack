@@ -1,5 +1,5 @@
 # =============================================================================
-# ForensicStack — Automated Setup Script (Windows / PowerShell)
+# ForensicStack - Automated Setup Script (Windows / PowerShell)
 # =============================================================================
 # Usage (run from repo root, as Administrator if docker requires it):
 #   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
@@ -8,7 +8,7 @@
 
 $ErrorActionPreference = "Stop"
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# -- Helpers -------------------------------------------------------------------
 function Info    { param($msg) Write-Host "[setup] $msg" -ForegroundColor Cyan }
 function Success { param($msg) Write-Host "[setup] OK  $msg" -ForegroundColor Green }
 function Warn    { param($msg) Write-Host "[setup] !!  $msg" -ForegroundColor Yellow }
@@ -18,7 +18,7 @@ function Step    { param($msg) Write-Host "`n== $msg ==" -ForegroundColor White 
 function Require {
     param($tool)
     if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
-        Fail "Required tool not found: $tool — install it first (see README)."
+        Fail "Required tool not found: $tool - install it first (see README)."
     }
     Success "$tool is available"
 }
@@ -27,7 +27,7 @@ $RepoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $RepoRoot
 
 # =============================================================================
-Step "1/8 — Prerequisites check"
+Step "1/8 - Prerequisites check"
 # =============================================================================
 
 Require "docker"
@@ -51,7 +51,7 @@ if ([int]$NodeMajor -lt 18) {
 }
 
 # =============================================================================
-Step "2/8 — Backend — environment file"
+Step "2/8 - Backend - environment file"
 # =============================================================================
 
 if (-not (Test-Path "backend\.env")) {
@@ -63,22 +63,22 @@ if (-not (Test-Path "backend\.env")) {
     Success "backend\.env created with a fresh SECRET_KEY"
     Warn "Review backend\.env and change the default passwords before exposing this to a network."
 } else {
-    Success "backend\.env already exists — skipping"
+    Success "backend\.env already exists - skipping"
 }
 
 # =============================================================================
-Step "3/8 — Frontend — environment file"
+Step "3/8 - Frontend - environment file"
 # =============================================================================
 
 if (-not (Test-Path "web\.env.local")) {
     Copy-Item "web\.env.local.example" "web\.env.local"
     Success "web\.env.local created"
 } else {
-    Success "web\.env.local already exists — skipping"
+    Success "web\.env.local already exists - skipping"
 }
 
 # =============================================================================
-Step "4/8 — Docker infrastructure (postgres, redis, minio, chromadb)"
+Step "4/8 - Docker infrastructure (postgres, redis, minio, chromadb)"
 # =============================================================================
 
 Info "Starting infrastructure containers..."
@@ -94,7 +94,7 @@ while ($true) {
         break
     }
     if ($Elapsed -ge $Timeout) {
-        Warn "Timeout waiting for containers — check with: docker compose -f backend/docker-compose.yml ps"
+        Warn "Timeout waiting for containers - check with: docker compose -f backend/docker-compose.yml ps"
         break
     }
     Start-Sleep -Seconds 3
@@ -103,7 +103,7 @@ while ($true) {
 }
 
 # =============================================================================
-Step "5/8 — Forensic tool Docker images + Volatility3 symbol cache"
+Step "5/8 - Forensic tool Docker images + Volatility3 symbol cache"
 # =============================================================================
 
 $Images = @(
@@ -120,13 +120,13 @@ foreach ($img in $Images) {
 }
 
 if ($AllExist) {
-    Success "All forensic tool images already built — skipping"
+    Success "All forensic tool images already built - skipping"
 } else {
     Info "Building forensic tool images (first build may take 5-15 minutes)..."
     & "$PSScriptRoot\build-tools.ps1"
 }
 
-# ── Volatility3 symbol cache ───────────────────────────────────────────────
+# -- Volatility3 symbol cache -----------------------------------------------
 # Check whether the named volume already has ISF symbol files.
 # If yes: skip the ~350 MB download.  If no: seed it automatically.
 Info "Checking Volatility3 symbol cache..."
@@ -136,7 +136,7 @@ $VolCount = docker run --rm `
 $VolCount = [int]($VolCount -replace '\D', '')
 
 if ($VolCount -gt 100) {
-    Success "Volatility3 symbol cache already populated ($VolCount ISF files) — skipping"
+    Success "Volatility3 symbol cache already populated ($VolCount ISF files) - skipping"
 } else {
     Info "Seeding Volatility3 symbol cache (~350 MB, one-time download)..."
     Info "This pre-populates the cache volume so memory analysis works offline."
@@ -144,7 +144,7 @@ if ($VolCount -gt 100) {
 }
 
 # =============================================================================
-Step "6/8 — Backend — Python virtual environment"
+Step "6/8 - Backend - Python virtual environment"
 # =============================================================================
 
 if (-not (Test-Path "backend\venv")) {
@@ -152,7 +152,7 @@ if (-not (Test-Path "backend\venv")) {
     python -m venv backend\venv
     Success "venv created at backend\venv"
 } else {
-    Success "backend\venv already exists — skipping creation"
+    Success "backend\venv already exists - skipping creation"
 }
 
 Info "Installing Python dependencies..."
@@ -161,7 +161,7 @@ Info "Installing Python dependencies..."
 Success "Python dependencies installed"
 
 # =============================================================================
-Step "7/8 — Frontend — Node dependencies"
+Step "7/8 - Frontend - Node dependencies"
 # =============================================================================
 
 Info "Installing frontend dependencies with 'npm ci' (reproducible install)..."
@@ -172,7 +172,7 @@ Set-Location $RepoRoot
 Success "Frontend dependencies installed"
 
 # =============================================================================
-Step "8/8 — Done!"
+Step "8/8 - Done!"
 # =============================================================================
 
 Write-Host ""
@@ -200,5 +200,5 @@ Write-Host ""
 Write-Host "  Open:  http://localhost:3000" -ForegroundColor White
 Write-Host "  Docs:  http://localhost:8001/docs" -ForegroundColor White
 Write-Host ""
-Write-Host "!! Never run 'npm audit fix --force' — it upgrades major versions and breaks the build." -ForegroundColor Yellow
+Write-Host "!! Never run 'npm audit fix --force' - it upgrades major versions and breaks the build." -ForegroundColor Yellow
 Write-Host ""

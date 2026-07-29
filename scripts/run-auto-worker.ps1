@@ -1,5 +1,5 @@
 # =============================================================================
-# run-auto-worker.ps1 — start the autonomous triage worker on the host (Windows)
+# run-auto-worker.ps1 - start the autonomous triage worker on the host (Windows)
 # =============================================================================
 # The /api/v1/analyze pipeline queues jobs on a Redis Stream that is consumed by
 # forensicstack.stream_worker (NOT the legacy forensicstack.worker). This script
@@ -25,7 +25,7 @@ $backend   = Join-Path $root "backend"
 $envFile   = Join-Path $backend ".env"
 
 if (-not (Test-Path $envFile)) {
-    Write-Error "backend/.env not found — run scripts/setup first."
+    Write-Error "backend/.env not found - run scripts/setup first."
     exit 1
 }
 

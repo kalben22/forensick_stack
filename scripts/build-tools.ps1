@@ -1,5 +1,5 @@
 # =============================================================================
-# ForensicStack — Build forensic tool Docker images (Windows PowerShell)
+# ForensicStack - Build forensic tool Docker images (Windows PowerShell)
 #
 # Run this ONCE after cloning, before submitting any analysis jobs.
 #
