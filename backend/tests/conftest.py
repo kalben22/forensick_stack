@@ -9,6 +9,7 @@ Strategy:
     so the lifespan startup handler and every route dependency pick up the
     overrides automatically.
 """
+
 import os
 
 # ── 0. Secrets must exist before ANY forensicstack import ────────────────────
@@ -21,6 +22,10 @@ os.environ.setdefault("POSTGRES_PASSWORD", "test-postgres-password")
 os.environ.setdefault("MINIO_ACCESS_KEY", "test-minio-access-key")
 os.environ.setdefault("MINIO_SECRET_KEY", "test-minio-secret-key")
 os.environ.setdefault("REDIS_PASSWORD", "")
+# Disable the auth rate limiter for the general suite: fixtures hit /register and
+# /login many times from the same client, which would otherwise trip the window.
+# The limiter itself is covered explicitly in test_ratelimit.py.
+os.environ.setdefault("RATELIMIT_ENABLED", "false")
 
 import pytest
 from unittest.mock import MagicMock
@@ -50,12 +55,14 @@ import forensicstack.core.minio_service as _minio_mod
 
 _mock_minio = MagicMock()
 _mock_minio.compute_hashes.return_value = (
-    "d41d8cd98f00b204e9800998ecf8427e",   # md5 of empty bytes
+    "d41d8cd98f00b204e9800998ecf8427e",  # md5 of empty bytes
     "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 )
 _mock_minio.build_object_name.return_value = "case-1/test_file.bin"
 _mock_minio.upload_artifact.return_value = "case-1/test_file.bin"
-_mock_minio.get_presigned_url.return_value = "http://localhost:9000/forensic-artifacts/case-1/test_file.bin"
+_mock_minio.get_presigned_url.return_value = (
+    "http://localhost:9000/forensic-artifacts/case-1/test_file.bin"
+)
 _mock_minio.delete_artifact.return_value = None
 _minio_mod._minio_service = _mock_minio
 
@@ -83,7 +90,7 @@ _chroma_mod._chroma_service = _mock_chroma
 # ── 5. Create SQLite tables ───────────────────────────────────────────────────
 
 from forensicstack.core.models import Case, Artifact, Analysis  # noqa: F401 — register models
-from forensicstack.core.models.user_model import User           # noqa: F401
+from forensicstack.core.models.user_model import User  # noqa: F401
 from forensicstack.core.database import Base
 
 Base.metadata.create_all(bind=_test_engine)

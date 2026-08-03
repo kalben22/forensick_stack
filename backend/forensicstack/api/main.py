@@ -1,14 +1,23 @@
+import os
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer
-
-import os
 
 from forensicstack.api.routes import (
-    analyze, cases, auth, artifacts, jobs, search,
+    analyze,
+    artifacts,
+    auth,
+    cases,
+    jobs,
+    search,
 )
+from forensicstack.core.observability import RequestContextMiddleware, configure_logging
+
+# Structured logging for the whole process, installed before the app handles any
+# request so every line carries the request-id set by RequestContextMiddleware.
+configure_logging()
 
 # NOTE: `routes.analysis` (/api/v1/analysis/*) is deliberately NOT imported.
 # That surface is dead: it dispatches with Celery `.delay()`, but no Celery
@@ -26,11 +35,11 @@ async def lifespan(app: FastAPI):
     """Startup / shutdown lifecycle handler."""
     print("[ForensicStack] API starting...")
 
-    from forensicstack.core.database import engine, test_connection
+    from forensicstack.core.database import Base, engine, test_connection
+
     # Import all models so SQLAlchemy registers them on Base.metadata
-    from forensicstack.core.models import Case, Artifact, Analysis  # noqa: F401
-    from forensicstack.core.models.user_model import User           # noqa: F401
-    from forensicstack.core.database import Base
+    from forensicstack.core.models import Analysis, Artifact, Case  # noqa: F401
+    from forensicstack.core.models.user_model import User  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
 
@@ -65,9 +74,9 @@ app = FastAPI(
 # token. Origins are now explicit and environment-driven.
 _origins = [
     o.strip()
-    for o in os.getenv(
-        "CORS_ALLOW_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
-    ).split(",")
+    for o in os.getenv("CORS_ALLOW_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(
+        ","
+    )
     if o.strip()
 ]
 
@@ -76,21 +85,27 @@ app.add_middleware(
     allow_origins=_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+    expose_headers=["X-Request-ID"],
     max_age=600,
 )
 
+# Added last so it is the OUTERMOST middleware: the correlation id is bound and
+# the access line is emitted around everything else, including CORS.
+app.add_middleware(RequestContextMiddleware)
+
 # ── Routers ────────────────────────────────────────────────────────────────────
 
-app.include_router(auth.router)          # /auth/*
-app.include_router(cases.router)         # /api/v1/cases/*
-app.include_router(artifacts.router)     # /api/v1/cases/{id}/artifacts/*
-app.include_router(jobs.router)          # /api/v1/jobs/*
-app.include_router(analyze.router)       # /api/v1/analyze/*  (auto-triage + routing)
-app.include_router(search.router)        # /api/v1/search/*
+app.include_router(auth.router)  # /auth/*
+app.include_router(cases.router)  # /api/v1/cases/*
+app.include_router(artifacts.router)  # /api/v1/cases/{id}/artifacts/*
+app.include_router(jobs.router)  # /api/v1/jobs/*
+app.include_router(analyze.router)  # /api/v1/analyze/*  (auto-triage + routing)
+app.include_router(search.router)  # /api/v1/search/*
 
 
 # ── Public endpoints ───────────────────────────────────────────────────────────
+
 
 @app.get("/", tags=["root"])
 async def root():
@@ -98,16 +113,16 @@ async def root():
         "message": "Welcome to ForensicStack API",
         "version": "0.2.0",
         "status": "running",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "docs": "/docs",
         "endpoints": {
-            "auth":      "/auth",
-            "cases":     "/api/v1/cases",
+            "auth": "/auth",
+            "cases": "/api/v1/cases",
             "artifacts": "/api/v1/cases/{case_id}/artifacts",
-            "analysis":  "/api/v1/analysis",
-            "jobs":      "/api/v1/jobs",
-            "search":    "/api/v1/search",
-            "health":    "/health",
+            "analysis": "/api/v1/analysis",
+            "jobs": "/api/v1/jobs",
+            "search": "/api/v1/search",
+            "health": "/health",
         },
     }
 
@@ -115,12 +130,13 @@ async def root():
 @app.get("/health", tags=["root"])
 async def health_check():
     from forensicstack.core.database import test_connection
+
     db_ok = test_connection()
     return {
         "status": "healthy" if db_ok else "degraded",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "services": {
-            "api":      "running",
+            "api": "running",
             "database": "connected" if db_ok else "unavailable",
         },
     }
